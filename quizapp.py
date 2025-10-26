@@ -20,6 +20,9 @@ Quiz data format in Google Sheets:
 exe 배포 : 
 pyinstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
 """
+def show_version():
+    messagebox.showinfo("버전 정보", "QuizApp v0.3.0\n2025-10-26")
+    # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
 
 # Google Sheets API 인증 설정
 def fetch_quiz_data():
@@ -78,7 +81,11 @@ def update_question():
 root = tk.Tk()
 root.title("한글 → 영어 단어 퀴즈")
 root.attributes('-fullscreen', True)
+# root.geometry("800x600")
 root.configure(bg='black')
+
+# 예: F1 키로 버전 정보 보기
+root.bind("<F1>", lambda event: show_version())
 
 label = tk.Label(root, text="", font=("Arial", 28), fg="white", bg="black")
 label.pack(pady=80)
