@@ -6,6 +6,10 @@ from tkinter import messagebox
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import keyboard
+import psutil
+import subprocess
+import time
+import logging
 
 """
 Description:
@@ -21,6 +25,19 @@ Quiz data format in Google Sheets:
 exe 배포 : 
 pyinstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
 """
+# F1 키로 버전 정보 보기
+def show_version():
+    messagebox.showinfo("버전 정보", "QuizApp v0.4.0\n2025-10-26")
+    # QuizApp v0.4.0 : 프로세스 종료 로그 추가
+    # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
+
+# 로그 설정
+logging.basicConfig(
+    filename="log.txt",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 # quizapp 실행시 Windows 키 차단
 def block_windows_key():
     keyboard.block_key('left windows')
@@ -33,11 +50,6 @@ def unblock_windows_key():
 def on_closing():
     unblock_windows_key()
     root.destroy()
-
-# F1 키로 버전 정보 보기
-def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v0.3.0\n2025-10-26")
-    # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
 
 # Google Sheets API 인증 설정
 def fetch_quiz_data():
@@ -120,6 +132,60 @@ button.pack(pady=30)
 def disable_event():
     pass
 root.protocol("WM_DELETE_WINDOW", disable_event)
+
+# quizapp 실행 전의 프로세스를 모두 종료하고 quizapp을 실행하는 함수
+SAFE_PROCESSES = [
+    "quizapp.exe"
+    , "explorer.exe"
+    , "winlogon.exe"
+    , "svchost.exe"
+    , "system"
+    , "services.exe"
+    , "lsass.exe"
+    , "Registry"
+    , "smss.exe"
+    , "csrss.exe"
+    , "wininit.exe"
+    , "wmiprvse.exe"
+    , "vmms.exe"
+    , "sihost.exe"
+    , "aggregatorhost.exe"
+    , "usbservice64.exe"
+    , "securityhealthservice.exe"
+    , "code.exe"
+]
+def launch_quizapp_and_close_others(app_path=r"C:\apps\quizapp\quizapp.exe", wait_time=3):
+    """
+    quizapp 실행 전의 프로세스를 모두 종료하고 quizapp을 실행합니다.
+    
+    Parameters:
+    - app_path: 실행할 quizapp 경로
+    - wait_time: quizapp 실행 후 대기 시간 (초)
+    """
+    # 1. 현재 실행 중인 프로세스 목록 저장
+    before = {p.pid: p.info for p in psutil.process_iter(['name', 'create_time'])}
+
+    # 2. quizapp 실행
+    subprocess.Popen(app_path)
+
+    # 3. 앱이 안정적으로 실행될 수 있도록 대기
+    time.sleep(wait_time)
+
+    # 4. quizapp 이전에 실행된 프로세스 종료
+    logging.info("###프로세스 종료 작업 시작")
+    for pid, info in before.items():
+        try:
+            proc = psutil.Process(pid)
+            name = proc.name().lower()
+            if name not in SAFE_PROCESSES:
+                proc.terminate()
+                logging.info(f"종료됨: {name} (PID: {pid})")
+            else:
+                logging.info(f"유지됨: {name} (PID: {pid})")
+        except Exception as e:
+            logging.warning(f"종료 실패: PID {pid}, 오류: {e}")
+    logging.info("###프로세스 종료 작업 완료")
+launch_quizapp_and_close_others()
 
 update_question()
 root.mainloop()
