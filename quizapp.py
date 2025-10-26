@@ -10,6 +10,8 @@ import psutil
 import subprocess
 import time
 import logging
+import win32gui
+import win32process
 
 """
 Description:
@@ -27,7 +29,8 @@ pyinstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp
 """
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v0.4.0\n2025-10-26")
+    messagebox.showinfo("버전 정보", "QuizApp v0.5.0\n2025-10-27")
+    # QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
     # QuizApp v0.4.0 : 프로세스 종료 로그 추가
     # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
 
@@ -138,35 +141,48 @@ def disable_event():
     pass
 root.protocol("WM_DELETE_WINDOW", disable_event)
 
-def terminate_background_processes(safe_processes=None):
-    """
-    현재 실행 중인 프로세스 중, 안전 목록에 없는 프로세스를 종료합니다.
-
-    Parameters:
-    - safe_processes: 종료하지 않을 프로세스 이름 목록 (소문자 기준)
-    """
+# 백그라운드 프로세스 종료 함수
+def terminate_foreground_processes(safe_processes=None):
     if safe_processes is None:
         safe_processes = [
-            "quizapp.exe", "explorer.exe", "winlogon.exe", "svchost.exe",
-            "system", "services.exe", "lsass.exe", "registry", "smss.exe",
-            "csrss.exe", "wininit.exe", "wmiprvse.exe", "vmms.exe",
-            "sihost.exe", "aggregatorhost.exe", "usbservice64.exe",
-            "securityhealthservice.exe", "code.exe"
+            "quizapp.exe", "code.exe", "explorer.exe"
+            # , "chrome.exe"
         ]
 
-    logging.info("###프로세스 종료 작업 시작")
-    for proc in psutil.process_iter(['name']):
+    # 현재 실행 중인 프로세스 이름도 보호
+    current_process_name = psutil.Process(os.getpid()).name().lower()
+    if current_process_name not in safe_processes:
+        safe_processes.append(current_process_name)
+
+    logging.info("### 포그라운드 프로세스 종료 시작")
+
+    def enum_window_callback(hwnd, pid_list):
+        if win32gui.IsWindowVisible(hwnd):
+            try:
+                _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                pid_list.add(pid)
+            except Exception:
+                pass
+
+    visible_pids = set()
+    win32gui.EnumWindows(enum_window_callback, visible_pids)
+
+    for pid in visible_pids:
         try:
-            name = proc.info['name'].lower()
+            proc = psutil.Process(pid)
+            name = proc.name().lower()
             if name not in safe_processes:
                 proc.terminate()
-                logging.info(f"종료됨: {name} (PID: {proc.pid})")
+                logging.info(f"종료됨: {name} (PID: {pid})")
             else:
-                logging.info(f"유지됨: {name} (PID: {proc.pid})")
+                logging.info(f"유지됨: {name} (PID: {pid})")
         except Exception as e:
-            logging.warning(f"종료 실패: PID {proc.pid}, 오류: {e}")
-    logging.info("### 백그라운드 프로세스 종료 완료")
-terminate_background_processes()
+            logging.warning(f"종료 실패: PID {pid}, 오류: {e}")
+
+    logging.info("### 포그라운드 프로세스 종료 완료")
+
+
+terminate_foreground_processes()
 
 update_question()
 root.mainloop()
