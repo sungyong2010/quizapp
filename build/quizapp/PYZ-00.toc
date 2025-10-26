@@ -1,4 +1,4 @@
-('D:\\Related_WORK\\Related_Study\\Related_Kiosk\\build\\quizapp\\PYZ-00.pyz',
+('D:\\Related_WORK\\Related_Study\\Related_Kiosk\\quizapp\\build\\quizapp\\PYZ-00.pyz',
  [('__future__', 'D:\\Apps\\Python\\Python313\\Lib\\__future__.py', 'PYMODULE'),
   ('_aix_support',
    'D:\\Apps\\Python\\Python313\\Lib\\_aix_support.py',
