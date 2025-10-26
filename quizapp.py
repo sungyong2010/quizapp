@@ -5,6 +5,7 @@ import tkinter as tk
 from tkinter import messagebox
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+import keyboard
 
 """
 Description:
@@ -20,6 +21,20 @@ Quiz data format in Google Sheets:
 exe 배포 : 
 pyinstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
 """
+# quizapp 실행시 Windows 키 차단
+def block_windows_key():
+    keyboard.block_key('left windows')
+    keyboard.block_key('right windows')
+
+def unblock_windows_key():
+    keyboard.unblock_key('left windows')
+    keyboard.unblock_key('right windows')
+
+def on_closing():
+    unblock_windows_key()
+    root.destroy()
+
+# F1 키로 버전 정보 보기
 def show_version():
     messagebox.showinfo("버전 정보", "QuizApp v0.3.0\n2025-10-26")
     # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
@@ -82,6 +97,8 @@ root = tk.Tk()
 root.title("한글 → 영어 단어 퀴즈")
 root.attributes('-fullscreen', True)
 # root.geometry("800x600")
+root.protocol("WM_DELETE_WINDOW", on_closing)
+block_windows_key()
 root.configure(bg='black')
 
 # 예: F1 키로 버전 정보 보기
