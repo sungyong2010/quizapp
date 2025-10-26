@@ -138,59 +138,35 @@ def disable_event():
     pass
 root.protocol("WM_DELETE_WINDOW", disable_event)
 
-# quizapp 실행 전의 프로세스를 모두 종료하고 quizapp을 실행하는 함수
-SAFE_PROCESSES = [
-    "quizapp.exe"
-    , "explorer.exe"
-    , "winlogon.exe"
-    , "svchost.exe"
-    , "system"
-    , "services.exe"
-    , "lsass.exe"
-    , "Registry"
-    , "smss.exe"
-    , "csrss.exe"
-    , "wininit.exe"
-    , "wmiprvse.exe"
-    , "vmms.exe"
-    , "sihost.exe"
-    , "aggregatorhost.exe"
-    , "usbservice64.exe"
-    , "securityhealthservice.exe"
-    , "code.exe"
-]
-def launch_quizapp_and_close_others(app_path=r"C:\apps\quizapp\quizapp.exe", wait_time=3):
+def terminate_background_processes(safe_processes=None):
     """
-    quizapp 실행 전의 프로세스를 모두 종료하고 quizapp을 실행합니다.
-    
+    현재 실행 중인 프로세스 중, 안전 목록에 없는 프로세스를 종료합니다.
+
     Parameters:
-    - app_path: 실행할 quizapp 경로
-    - wait_time: quizapp 실행 후 대기 시간 (초)
+    - safe_processes: 종료하지 않을 프로세스 이름 목록 (소문자 기준)
     """
-    # 1. 현재 실행 중인 프로세스 목록 저장
-    before = {p.pid: p.info for p in psutil.process_iter(['name', 'create_time'])}
+    if safe_processes is None:
+        safe_processes = [
+            "quizapp.exe", "explorer.exe", "winlogon.exe", "svchost.exe",
+            "system", "services.exe", "lsass.exe", "registry", "smss.exe",
+            "csrss.exe", "wininit.exe", "wmiprvse.exe", "vmms.exe",
+            "sihost.exe", "aggregatorhost.exe", "usbservice64.exe",
+            "securityhealthservice.exe", "code.exe"
+        ]
 
-    # 2. quizapp 실행
-    subprocess.Popen(app_path)
-
-    # 3. 앱이 안정적으로 실행될 수 있도록 대기
-    time.sleep(wait_time)
-
-    # 4. quizapp 이전에 실행된 프로세스 종료
     logging.info("###프로세스 종료 작업 시작")
-    for pid, info in before.items():
+    for proc in psutil.process_iter(['name']):
         try:
-            proc = psutil.Process(pid)
-            name = proc.name().lower()
-            if name not in SAFE_PROCESSES:
+            name = proc.info['name'].lower()
+            if name not in safe_processes:
                 proc.terminate()
-                logging.info(f"종료됨: {name} (PID: {pid})")
+                logging.info(f"종료됨: {name} (PID: {proc.pid})")
             else:
-                logging.info(f"유지됨: {name} (PID: {pid})")
+                logging.info(f"유지됨: {name} (PID: {proc.pid})")
         except Exception as e:
-            logging.warning(f"종료 실패: PID {pid}, 오류: {e}")
-    logging.info("###프로세스 종료 작업 완료")
-launch_quizapp_and_close_others()
+            logging.warning(f"종료 실패: PID {proc.pid}, 오류: {e}")
+    logging.info("### 백그라운드 프로세스 종료 완료")
+terminate_background_processes()
 
 update_question()
 root.mainloop()
