@@ -32,8 +32,13 @@ def show_version():
     # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
 
 # 로그 설정
+# 로그 디렉터리 확인 및 생성
+log_dir = r"C:\temp"
+os.makedirs(log_dir, exist_ok=True)  # 폴더가 없으면 자동 생성
+
+# 로그 설정
 logging.basicConfig(
-    filename="log.txt",
+    filename=os.path.join(log_dir, "log.txt"),
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s"
 )
