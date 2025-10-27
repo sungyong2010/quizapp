@@ -25,7 +25,7 @@ Quiz data format in Google Sheets:
 => https://docs.google.com/spreadsheets/d/1BHkAT3j75_jq5qM5p1AZ73NaR4JhcxP7uBeWZRE0CD8/edit?usp=sharing
 
 exe 배포 : 
-pyinstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
+pyinstaller -O --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
 """
 
 
@@ -138,6 +138,10 @@ def update_question():
     entry.delete(0, tk.END)
     korean_word = quiz_data[current_index][0]
     
+    # 현재 문제 번호와 전체 문제 수
+    current_num = current_index + 1
+    total_num = len(quiz_data)
+    
     # 준기에게 보내는 메시지
     message = f"""우리 준기가 오늘 외운 영어 단어로 언젠가
 외국 친구들과 웃으며 이야기하는 모습을 상상해봐.
@@ -147,7 +151,7 @@ def update_question():
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-다음 영어 단어를 맞춰보세요:
+다음 영어 단어를 맞춰보세요({current_num}/{total_num}):
 
 '{korean_word}'"""
     
@@ -187,6 +191,10 @@ def disable_event():
 root.protocol("WM_DELETE_WINDOW", disable_event)
 
 
+# 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)
+# 환경 변수 QUIZAPP_DEBUG=1이 설정된 경우에만 디버그 모드
+DEBUG_MODE = os.getenv('QUIZAPP_DEBUG', '0') == '1' or __debug__
+
 # 포그라운드 프로세스 종료 함수
 def terminate_foreground_processes(safe_processes=None):
     if safe_processes is None:
@@ -197,8 +205,11 @@ def terminate_foreground_processes(safe_processes=None):
             , "windowsterminal.exe"
             , "wt.exe"
             , "openonsole.exe"
-            # , "chrome.exe"
         ]
+
+        # DEBUG 모드에서만 chrome.exe 허용 (C언어 #ifdef DEBUG와 유사)
+        if DEBUG_MODE:
+            safe_processes.append("chrome.exe")
 
     # 현재 실행 중인 프로세스 이름도 보호
     current_process_name = psutil.Process(os.getpid()).name().lower()
