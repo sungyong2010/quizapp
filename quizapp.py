@@ -190,11 +190,11 @@ def early_process_cleanup():
     """프로그램 로딩 중 조기 프로세스 정리"""
     try:
         # 간단한 프로세스 정리 (빠른 실행을 위해 최소화)
-        unsafe_processes = ["cmd.exe", "powershell.exe", "notepad.exe", "explorer.exe"]
+        unsafe_processes = ["cmd.exe", "notepad.exe", "explorer.exe"]
         
         # DEBUG 모드가 아닌 경우에만 브라우저도 종료
         if not DEBUG_MODE:
-            unsafe_processes.extend(["chrome.exe", "firefox.exe", "msedge.exe"])
+            unsafe_processes.extend(["chrome.exe", "firefox.exe", "msedge.exe", "powershell.exe"])
         
         for proc in psutil.process_iter(['pid', 'name']):
             try:
@@ -224,6 +224,7 @@ def terminate_foreground_processes(safe_processes=None):
         if DEBUG_MODE:
             safe_processes.append("chrome.exe")
             safe_processes.append("vsclient.exe")
+            safe_processes.append("powershell.exe")
 
     # 로블록스 프로세스는 무조건 종료 대상
     BLOCKED_PROCESSES = [
@@ -284,7 +285,6 @@ class ProcessMonitor:
     def _monitor_loop(self):
         """프로세스 모니터링 루프"""
         unsafe_processes = ["cmd.exe"
-                            , "powershell.exe"
                             , "notepad.exe"
                             , "chrome.exe"
                             , "firefox.exe"
