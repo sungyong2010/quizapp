@@ -197,7 +197,7 @@ def terminate_foreground_processes(safe_processes=None):
             , "windowsterminal.exe"
             , "wt.exe"
             , "openonsole.exe"
-            , "chrome.exe"
+            # , "chrome.exe"
         ]
 
     # 현재 실행 중인 프로세스 이름도 보호
