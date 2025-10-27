@@ -31,7 +31,8 @@ pyinstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v0.5.0\n2025-10-27")
+    messagebox.showinfo("버전 정보", "QuizApp v0.6.0\n2025-10-27")
+    # QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
     # QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
     # QuizApp v0.4.0 : 프로세스 종료 로그 추가
     # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
@@ -175,7 +176,14 @@ root.protocol("WM_DELETE_WINDOW", disable_event)
 # 포그라운드 프로세스 종료 함수
 def terminate_foreground_processes(safe_processes=None):
     if safe_processes is None:
-        safe_processes = ["quizapp.exe", "code.exe", "explorer.exe", "chrome.exe"]
+        safe_processes = ["quizapp.exe",
+                          "code.exe",
+                          "explorer.exe",
+                          "chrome.exe",
+                          "windowsterminal.exe",
+                          "wt.exe",
+                          "openonsole.exe"
+                          ]
 
     # 현재 실행 중인 프로세스 이름도 보호
     current_process_name = psutil.Process(os.getpid()).name().lower()
