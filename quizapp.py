@@ -160,28 +160,33 @@ def check_answer():
 def update_question():
     entry.delete(0, tk.END)
     korean_word = quiz_data[current_index][0]
-    
+
     # 현재 문제 번호와 전체 문제 수
     current_num = current_index + 1
     total_num = len(quiz_data)
-    
+
     # 준기에게 보내는 메시지
     message = f"""우리 준기가 오늘 외운 영어 단어로 언젠가
 외국 친구들과 웃으며 이야기하는 모습을 상상해봐.
 
 그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.
-힘들어도 아빠가 끝까지 함께 할게.
+힘들어도 아빠가 끝까지 함께 할게
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 다음 영어 단어를 맞춰보세요({current_num}/{total_num}):
 
 '{korean_word}'"""
-    
+
     label.config(text=message)
 
+    # 포커스 강제 설정 (지연 후 재적용 및 독점 포커스)
+    entry.focus_set()
+    entry.grab_set()  # 입력 필드가 포커스를 독점
+    root.after(100, lambda: entry.focus_set())  # 100ms 후 다시 포커스
 
-# 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)  
+
+# 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)
 # __debug__는 python -O로 실행시 False가 됨
 DEBUG_MODE = __debug__
 
@@ -316,22 +321,25 @@ class ProcessMonitor:
 # 프로세스 모니터 생성
 process_monitor = ProcessMonitor()
 
+# 전체 화면 GUI 설정
+root = tk.Tk()
+root.title("한글 → 영어 단어 퀴즈")
+# 전체 화면 대신 최대화로 변경 (포커스 호환성 향상)
+root.state('zoomed')  # 'zoomed'는 최대화 모드
+root.overrideredirect(True)  # 타이틀바 및 최소/최대/닫기 버튼 제거
+root.protocol("WM_DELETE_WINDOW", on_closing)
+block_windows_key()
+root.configure(bg="black")
+
 # 프로그램 시작 즉시 프로세스 종료 (보안 강화)
 logging.info("프로그램 시작 - 즉시 프로세스 정리 실행")
 terminate_foreground_processes()
+# 프로세스 종료 후 포커스 재설정
+root.after(500, lambda: entry.focus_set())  # 500ms 지연 후 포커스
 
 # 백그라운드 모니터링 시작
 process_monitor.start_monitoring()
 logging.info("백그라운드 프로세스 모니터링 시작")
-
-# 전체 화면 GUI 설정
-root = tk.Tk()
-root.title("한글 → 영어 단어 퀴즈")
-root.attributes("-fullscreen", True)
-# root.geometry("800x600")
-root.protocol("WM_DELETE_WINDOW", on_closing)
-block_windows_key()
-root.configure(bg="black")
 
 # 예: F1 키로 버전 정보 보기
 root.bind("<F1>", lambda event: show_version())
@@ -367,6 +375,7 @@ button.pack(pady=30)
 
 # Entry 필드에 자동 포커스 설정
 entry.focus_set()
+root.after(200, lambda: entry.focus_set())  # 추가 지연 포커스
 
 # Alt+F4 방지 (릴리즈 빌드에만 적용)
 def disable_event():
