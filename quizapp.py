@@ -33,7 +33,8 @@ python -O -m PyInstaller --onefile --windowed --add-data "quizapp-credentials.js
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v0.7.0\n2025-10-27")
+    messagebox.showinfo("버전 정보", "QuizApp v0.8.0\n2025-10-27")
+    # QuizApp v0.8.0 : hidden code to exit program added
     # QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
     # QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
     # QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
@@ -125,17 +126,34 @@ current_index = 0
 # 정답 확인 함수
 def check_answer():
     global current_index
-    user_input = entry.get().strip().lower()
+    user_input = entry.get().strip()
+    
+    # 숨겨진 종료 코드 확인 (대소문자 구분 없음)
+    if user_input == "215161":
+        logging.info("숨겨진 종료 코드 입력됨 - 프로그램 종료")
+        messagebox.showinfo("종료", "프로그램을 종료합니다.")
+        process_monitor.stop_monitoring()
+        unblock_windows_key()
+        root.destroy()
+        return
+    
+    # 일반적인 정답 확인 (소문자로 변환)
+    user_input_lower = user_input.lower()
     correct_answer = quiz_data[current_index][1].lower()
-    if user_input == correct_answer:
+    
+    if user_input_lower == correct_answer:
         current_index += 1
         if current_index >= len(quiz_data):
             messagebox.showinfo("성공!", "모든 문제를 맞췄습니다!")
+            process_monitor.stop_monitoring()
+            unblock_windows_key()
             root.destroy()
         else:
             update_question()
     else:
         messagebox.showerror("틀렸습니다", "정답이 아닙니다. 다시 시도하세요.")
+        # 오답 후 입력 필드 초기화
+        entry.delete(0, tk.END)
 
 
 # 문제 업데이트
