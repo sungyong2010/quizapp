@@ -7,11 +7,14 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import keyboard
 import psutil
+import pygetwindow as gw
 import subprocess
 import time
 import logging
 import win32gui
 import win32process
+import threading
+import signal
 
 """
 Description:
@@ -28,10 +31,10 @@ exe 배포 :
 python -O -m PyInstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
 """
 
-
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v0.6.0\n2025-10-27")
+    messagebox.showinfo("버전 정보", "QuizApp v0.7.0\n2025-10-27")
+    # QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
     # QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
     # QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
     # QuizApp v0.4.0 : 프로세스 종료 로그 추가
@@ -72,6 +75,8 @@ def unblock_windows_key():
 
 
 def on_closing():
+    # 프로세스 모니터링 중지
+    process_monitor.stop_monitoring()
     unblock_windows_key()
     root.destroy()
 
@@ -158,9 +163,148 @@ def update_question():
     label.config(text=message)
 
 
-# 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)
+# 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)  
 # __debug__는 python -O로 실행시 False가 됨
 DEBUG_MODE = __debug__
+
+# 조기 프로세스 정리 (임포트 완료 즉시 실행)
+def early_process_cleanup():
+    """프로그램 로딩 중 조기 프로세스 정리"""
+    try:
+        # 간단한 프로세스 정리 (빠른 실행을 위해 최소화)
+        unsafe_processes = ["cmd.exe", "powershell.exe", "notepad.exe", "explorer.exe"]
+        
+        # DEBUG 모드가 아닌 경우에만 브라우저도 종료
+        if not DEBUG_MODE:
+            unsafe_processes.extend(["chrome.exe", "firefox.exe", "msedge.exe"])
+        
+        for proc in psutil.process_iter(['pid', 'name']):
+            try:
+                if proc.info['name'].lower() in unsafe_processes:
+                    proc.terminate()
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except Exception:
+        pass  # 에러 발생 시 무시하고 계속 진행
+
+# 임포트 완료 즉시 조기 프로세스 정리 실행
+early_process_cleanup()
+
+# 포그라운드 프로세스 종료 함수 (먼저 정의)
+def terminate_foreground_processes(safe_processes=None):
+    if safe_processes is None:
+        safe_processes = [
+            "quizapp.exe"
+            , "code.exe"
+            , "windowsterminal.exe"
+            , "wt.exe"
+            , "openonsole.exe"
+            , "explorer.exe"
+        ]
+        
+        # DEBUG 모드에서만 chrome.exe 허용 (C언어 #ifdef DEBUG와 유사)
+        if DEBUG_MODE:
+            safe_processes.append("chrome.exe")
+            safe_processes.append("vsclient.exe")
+
+    # 로블록스 프로세스는 무조건 종료 대상
+    BLOCKED_PROCESSES = [
+        "robloxplayerbeta.exe", "roblox.exe", "robloxstudio.exe"
+    ]
+
+    # 현재 실행 중인 프로세스 이름도 보호
+    current_process_name = psutil.Process(os.getpid()).name().lower()
+    if current_process_name not in safe_processes:
+        safe_processes.append(current_process_name)
+
+    logging.info("### 포그라운드 프로세스 종료 시작")
+
+    def enum_window_callback(hwnd, pid_list):
+        if win32gui.IsWindowVisible(hwnd):
+            try:
+                _, pid = win32process.GetWindowThreadProcessId(hwnd)
+                pid_list.add(pid)
+            except Exception:
+                pass
+
+    visible_pids = set()
+    win32gui.EnumWindows(enum_window_callback, visible_pids)
+
+    for pid in visible_pids:
+        try:
+            proc = psutil.Process(pid)
+            name = proc.name().lower()
+            if name in BLOCKED_PROCESSES:
+                proc.terminate()
+                logging.info(f"로블록스 종료됨: {name} (PID: {pid})")
+            if name not in safe_processes:
+                proc.terminate()
+                logging.info(f"종료됨: {name} (PID: {pid})")
+            else:
+                logging.info(f"유지됨: {name} (PID: {pid})")
+        except Exception as e:
+            logging.warning(f"종료 실패: PID {pid}, 오류: {e}")
+
+    logging.info("### 포그라운드 프로세스 종료 완료")
+
+# 백그라운드 프로세스 모니터링
+class ProcessMonitor:
+    def __init__(self):
+        self.running = True
+        self.monitor_thread = None
+        
+    def start_monitoring(self):
+        """백그라운드에서 프로세스 모니터링 시작"""
+        if not DEBUG_MODE:  # 릴리즈 모드에서만 모니터링
+            self.monitor_thread = threading.Thread(target=self._monitor_loop, daemon=True)
+            self.monitor_thread.start()
+            
+    def stop_monitoring(self):
+        """프로세스 모니터링 중지"""
+        self.running = False
+        
+    def _monitor_loop(self):
+        """프로세스 모니터링 루프"""
+        unsafe_processes = ["cmd.exe"
+                            , "powershell.exe"
+                            , "notepad.exe"
+                            , "chrome.exe"
+                            , "firefox.exe"
+                            , "msedge.exe"
+                            , "explorer.exe"
+                            ]
+        # 로블록스 프로세스는 무조건 종료 대상
+        BLOCKED_PROCESSES = [
+            "robloxplayerbeta.exe", "roblox.exe", "robloxstudio.exe"
+        ]
+
+        while self.running:
+            try:
+                for proc in psutil.process_iter(['pid', 'name']):
+                    try:
+                        if proc.info['name'].lower() in BLOCKED_PROCESSES:
+                            proc.terminate()
+                            logging.info(f"모니터링: {proc.info['name']} 종료 (PID: {proc.info['pid']})")
+                        if proc.info['name'].lower() in unsafe_processes:
+                            proc.terminate()
+                            logging.info(f"모니터링: {proc.info['name']} 종료 (PID: {proc.info['pid']})")
+                    except (psutil.NoSuchProcess, psutil.AccessDenied):
+                        pass
+                time.sleep(2)  # 2초마다 체크
+            except Exception as e:
+                logging.warning(f"모니터링 오류: {e}")
+                time.sleep(5)
+
+# 프로세스 모니터 생성
+process_monitor = ProcessMonitor()
+
+# 프로그램 시작 즉시 프로세스 종료 (보안 강화)
+logging.info("프로그램 시작 - 즉시 프로세스 정리 실행")
+terminate_foreground_processes()
+
+# 백그라운드 모니터링 시작
+process_monitor.start_monitoring()
+logging.info("백그라운드 프로세스 모니터링 시작")
 
 # 전체 화면 GUI 설정
 root = tk.Tk()
@@ -180,6 +324,8 @@ top_frame.pack(fill="x", side="top")
 
 # X 버튼 (우상단) - DEBUG 모드에서만 표시
 def close_app():
+    # 프로세스 모니터링 중지
+    process_monitor.stop_monitoring()
     on_closing()
 
 # DEBUG 모드에서만 X 버튼 생성
@@ -214,57 +360,6 @@ if not DEBUG_MODE:
 else:
     # DEBUG 모드에서는 정상적으로 창 닫기 허용
     root.protocol("WM_DELETE_WINDOW", on_closing)
-
-# 포그라운드 프로세스 종료 함수
-def terminate_foreground_processes(safe_processes=None):
-    if safe_processes is None:
-        safe_processes = [
-            "quizapp.exe"
-            , "code.exe"
-            , "windowsterminal.exe"
-            , "wt.exe"
-            , "openonsole.exe"
-        ]
-
-        # DEBUG 모드에서만 chrome.exe 허용 (C언어 #ifdef DEBUG와 유사)
-        if DEBUG_MODE:
-            safe_processes.append("chrome.exe")
-            safe_processes.append("vsclient.exe")
-
-    # 현재 실행 중인 프로세스 이름도 보호
-    current_process_name = psutil.Process(os.getpid()).name().lower()
-    if current_process_name not in safe_processes:
-        safe_processes.append(current_process_name)
-
-    logging.info("### 포그라운드 프로세스 종료 시작")
-
-    def enum_window_callback(hwnd, pid_list):
-        if win32gui.IsWindowVisible(hwnd):
-            try:
-                _, pid = win32process.GetWindowThreadProcessId(hwnd)
-                pid_list.add(pid)
-            except Exception:
-                pass
-
-    visible_pids = set()
-    win32gui.EnumWindows(enum_window_callback, visible_pids)
-
-    for pid in visible_pids:
-        try:
-            proc = psutil.Process(pid)
-            name = proc.name().lower()
-            if name not in safe_processes:
-                proc.terminate()
-                logging.info(f"종료됨: {name} (PID: {pid})")
-            else:
-                logging.info(f"유지됨: {name} (PID: {pid})")
-        except Exception as e:
-            logging.warning(f"종료 실패: PID {pid}, 오류: {e}")
-
-    logging.info("### 포그라운드 프로세스 종료 완료")
-
-
-terminate_foreground_processes()
 
 update_question()
 root.mainloop()
