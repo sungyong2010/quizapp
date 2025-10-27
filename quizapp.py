@@ -133,11 +133,14 @@ def check_answer():
         logging.info("숨겨진 종료 코드 입력됨 - 프로그램 종료")
         messagebox.showinfo("종료", "프로그램을 종료합니다.")
         process_monitor.stop_monitoring()
+        # 종료 직전에 explorer.exe 복구
+        subprocess.Popen("explorer.exe")
         unblock_windows_key()
         root.destroy()
+        sys.exit()
         return
     
-    # 일반적인 정답 확인 (소문자로 변환)
+    # 일반적인 정답 확인 (소문자로 변환)e
     user_input_lower = user_input.lower()
     correct_answer = quiz_data[current_index][1].lower()
     
@@ -146,8 +149,11 @@ def check_answer():
         if current_index >= len(quiz_data):
             messagebox.showinfo("성공!", "모든 문제를 맞췄습니다!")
             process_monitor.stop_monitoring()
+            # 종료 직전에 explorer.exe 복구
+            subprocess.Popen("explorer.exe")
             unblock_windows_key()
             root.destroy()
+            sys.exit()
         else:
             update_question()
     else:
