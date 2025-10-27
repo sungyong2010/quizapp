@@ -39,11 +39,20 @@ def show_version():
 log_dir = r"C:\temp"
 os.makedirs(log_dir, exist_ok=True)  # 폴더가 없으면 자동 생성
 
+# 기존 로그 파일 삭제 (존재하는 경우)
+log_file_path = os.path.join(log_dir, "log.txt")
+if os.path.exists(log_file_path):
+    try:
+        os.remove(log_file_path)
+    except OSError:
+        pass  # 파일 삭제 실패 시 무시
+
 # 로그 설정
 logging.basicConfig(
-    filename=os.path.join(log_dir, "log.txt"),
+    filename=log_file_path,
     level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    filemode='w'  # 쓰기 모드로 새 파일 생성
 )
 
 # quizapp 실행시 Windows 키 차단
