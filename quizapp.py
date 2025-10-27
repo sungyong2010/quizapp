@@ -129,7 +129,7 @@ def check_answer():
     user_input = entry.get().strip()
     
     # 숨겨진 종료 코드 확인 (대소문자 구분 없음)
-    if user_input == "215161":
+    if user_input == "dkfmaekdns":
         logging.info("숨겨진 종료 코드 입력됨 - 프로그램 종료")
         messagebox.showinfo("종료", "프로그램을 종료합니다.")
         process_monitor.stop_monitoring()
