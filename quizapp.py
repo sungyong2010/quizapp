@@ -25,7 +25,7 @@ Quiz data format in Google Sheets:
 => https://docs.google.com/spreadsheets/d/1BHkAT3j75_jq5qM5p1AZ73NaR4JhcxP7uBeWZRE0CD8/edit?usp=sharing
 
 exe 배포 : 
-pyinstaller -O --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
+python -O -m PyInstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
 """
 
 
@@ -158,6 +158,10 @@ def update_question():
     label.config(text=message)
 
 
+# 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)
+# __debug__는 python -O로 실행시 False가 됨
+DEBUG_MODE = __debug__
+
 # 전체 화면 GUI 설정
 root = tk.Tk()
 root.title("한글 → 영어 단어 퀴즈")
@@ -169,6 +173,21 @@ root.configure(bg="black")
 
 # 예: F1 키로 버전 정보 보기
 root.bind("<F1>", lambda event: show_version())
+
+# 상단 프레임 (X 버튼용)
+top_frame = tk.Frame(root, bg="black")
+top_frame.pack(fill="x", side="top")
+
+# X 버튼 (우상단) - DEBUG 모드에서만 표시
+def close_app():
+    on_closing()
+
+# DEBUG 모드에서만 X 버튼 생성
+if DEBUG_MODE:
+    close_button = tk.Button(top_frame, text="✕", font=("Arial", 20), 
+                            fg="white", bg="red", activebackground="darkred",
+                            command=close_app, width=3, height=1)
+    close_button.pack(side="right", padx=10, pady=5)
 
 label = tk.Label(root, text="", font=("Arial", 28), fg="white", bg="black")
 label.pack(pady=80)
@@ -182,18 +201,19 @@ entry.bind("<Return>", lambda event: check_answer())
 button = tk.Button(root, text="정답 제출", font=("Arial", 20), command=check_answer)
 button.pack(pady=30)
 
+# Entry 필드에 자동 포커스 설정
+entry.focus_set()
 
-# Alt+F4 방지
+# Alt+F4 방지 (릴리즈 빌드에만 적용)
 def disable_event():
     pass
 
-
-root.protocol("WM_DELETE_WINDOW", disable_event)
-
-
-# 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)
-# 환경 변수 QUIZAPP_DEBUG=1이 설정된 경우에만 디버그 모드
-DEBUG_MODE = os.getenv('QUIZAPP_DEBUG', '0') == '1' or __debug__
+# DEBUG 모드가 아닌 경우에만 Alt+F4 방지 적용
+if not DEBUG_MODE:
+    root.protocol("WM_DELETE_WINDOW", disable_event)
+else:
+    # DEBUG 모드에서는 정상적으로 창 닫기 허용
+    root.protocol("WM_DELETE_WINDOW", on_closing)
 
 # 포그라운드 프로세스 종료 함수
 def terminate_foreground_processes(safe_processes=None):
@@ -201,7 +221,6 @@ def terminate_foreground_processes(safe_processes=None):
         safe_processes = [
             "quizapp.exe"
             , "code.exe"
-            , "explorer.exe"
             , "windowsterminal.exe"
             , "wt.exe"
             , "openonsole.exe"
@@ -210,6 +229,7 @@ def terminate_foreground_processes(safe_processes=None):
         # DEBUG 모드에서만 chrome.exe 허용 (C언어 #ifdef DEBUG와 유사)
         if DEBUG_MODE:
             safe_processes.append("chrome.exe")
+            safe_processes.append("vsclient.exe")
 
     # 현재 실행 중인 프로세스 이름도 보호
     current_process_name = psutil.Process(os.getpid()).name().lower()
