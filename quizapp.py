@@ -137,7 +137,21 @@ def check_answer():
 def update_question():
     entry.delete(0, tk.END)
     korean_word = quiz_data[current_index][0]
-    label.config(text=f"다음 영어 단어를 맞춰보세요:\n\n'{korean_word}'")
+    
+    # 준기에게 보내는 메시지
+    message = f"""우리 준기가 오늘 외운 영어 단어로 언젠가
+외국 친구들과 웃으며 이야기하는 모습을 상상해봐.
+
+그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.
+힘들어도 아빠가 끝까지 함께 할게.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+다음 영어 단어를 맞춰보세요:
+
+'{korean_word}'"""
+    
+    label.config(text=message)
 
 
 # 전체 화면 GUI 설정
@@ -183,7 +197,7 @@ def terminate_foreground_processes(safe_processes=None):
             , "windowsterminal.exe"
             , "wt.exe"
             , "openonsole.exe"
-            # , "chrome.exe"
+            , "chrome.exe"
         ]
 
     # 현재 실행 중인 프로세스 이름도 보호
