@@ -176,14 +176,15 @@ root.protocol("WM_DELETE_WINDOW", disable_event)
 # 포그라운드 프로세스 종료 함수
 def terminate_foreground_processes(safe_processes=None):
     if safe_processes is None:
-        safe_processes = ["quizapp.exe",
-                          "code.exe",
-                          "explorer.exe",
-                          "chrome.exe",
-                          "windowsterminal.exe",
-                          "wt.exe",
-                          "openonsole.exe"
-                          ]
+        safe_processes = [
+            "quizapp.exe"
+            , "code.exe"
+            , "explorer.exe"
+            , "windowsterminal.exe"
+            , "wt.exe"
+            , "openonsole.exe"
+            # , "chrome.exe"
+        ]
 
     # 현재 실행 중인 프로세스 이름도 보호
     current_process_name = psutil.Process(os.getpid()).name().lower()
