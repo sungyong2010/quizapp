@@ -1,7 +1,0 @@
-관리자 계정에서 hongj의 레지스트리 하이브 직접 편집
-관리자 계정에서 regedit 실행
-HKEY_USERS로 이동
-hongj의 SID(보통 S-1-5-21-...)를 찾아서 해당 하이브 열기
-HKEY_USERS\<hongj SID>\Software\Microsoft\Windows\CurrentVersion\Policies\System
-DisableTaskMgr 값 추가 1
-SID는 powershell에서 whoami /user 명령어로 hongj 계정에서 확인 가능

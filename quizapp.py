@@ -134,7 +134,7 @@ def check_answer():
         messagebox.showinfo("종료", "프로그램을 종료합니다.")
         process_monitor.stop_monitoring()
         # 종료 직전에 explorer.exe 복구
-        subprocess.Popen("explorer.exe")
+        # subprocess.Popen("explorer.exe")
         unblock_windows_key()
         root.destroy()
         sys.exit()
@@ -150,7 +150,7 @@ def check_answer():
             messagebox.showinfo("성공!", "모든 문제를 맞췄습니다!")
             process_monitor.stop_monitoring()
             # 종료 직전에 explorer.exe 복구
-            subprocess.Popen("explorer.exe")
+            # subprocess.Popen("explorer.exe")
             unblock_windows_key()
             root.destroy()
             sys.exit()
@@ -201,11 +201,17 @@ def early_process_cleanup():
     """프로그램 로딩 중 조기 프로세스 정리"""
     try:
         # 간단한 프로세스 정리 (빠른 실행을 위해 최소화)
-        unsafe_processes = ["cmd.exe", "notepad.exe", "explorer.exe"]
+        unsafe_processes = ["cmd.exe"
+                            , "notepad.exe"
+                            # , "explorer.exe"
+                            ]
         
         # DEBUG 모드가 아닌 경우에만 브라우저도 종료
         if not DEBUG_MODE:
-            unsafe_processes.extend(["chrome.exe", "firefox.exe", "msedge.exe", "powershell.exe"])
+            unsafe_processes.extend(["chrome.exe"
+                                     , "firefox.exe"
+                                     , "msedge.exe"
+                                     , "powershell.exe"])
         
         for proc in psutil.process_iter(['pid', 'name']):
             try:
@@ -228,7 +234,7 @@ def terminate_foreground_processes(safe_processes=None):
             , "windowsterminal.exe"
             , "wt.exe"
             , "openonsole.exe"
-            , "explorer.exe"
+            # , "explorer.exe"
         ]
         
         # DEBUG 모드에서만 chrome.exe 허용 (C언어 #ifdef DEBUG와 유사)
@@ -300,7 +306,7 @@ class ProcessMonitor:
                             , "chrome.exe"
                             , "firefox.exe"
                             , "msedge.exe"
-                            , "explorer.exe"
+                            # , "explorer.exe"
                             ]
         # 로블록스 프로세스는 무조건 종료 대상
         BLOCKED_PROCESSES = [
@@ -336,6 +342,9 @@ root.overrideredirect(True)  # 타이틀바 및 최소/최대/닫기 버튼 제�
 root.protocol("WM_DELETE_WINDOW", on_closing)
 block_windows_key()
 root.configure(bg="black")
+
+# ✅ 포커스 강제 설정
+root.focus_force()
 
 # 프로그램 시작 즉시 프로세스 종료 (보안 강화)
 logging.info("프로그램 시작 - 즉시 프로세스 정리 실행")
