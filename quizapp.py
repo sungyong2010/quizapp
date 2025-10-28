@@ -33,7 +33,8 @@ python -O -m PyInstaller --onefile --windowed --add-data "quizapp-credentials.js
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.0.0\n2025-10-28")
+    messagebox.showinfo("버전 정보", "QuizApp v1.1.0\n2025-10-28")
+    # QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
     # QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
     # QuizApp v0.8.0 : hidden code to exit program added
     # QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
@@ -84,15 +85,13 @@ def on_closing():
 
 
 # Google Sheets API 인증 설정
-def fetch_quiz_data():
+# 퀴즈 데이터와 메시지 템플릿을 한 번에 가져오기
+def fetch_quiz_and_message():
     scope = [
         "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/drive",
     ]
-
-    # creds = ServiceAccountCredentials.from_json_keyfile_name("quizapp-credentials.json", scope)
     def resource_path(relative_path):
-        """PyInstaller 환경에서도 파일 경로를 안전하게 가져오기"""
         if hasattr(sys, "_MEIPASS"):
             return os.path.join(sys._MEIPASS, relative_path)
         return os.path.join(os.path.abspath("."), relative_path)
@@ -100,10 +99,8 @@ def fetch_quiz_data():
     creds = ServiceAccountCredentials.from_json_keyfile_name(
         resource_path("quizapp-credentials.json"), scope
     )
-
     client = gspread.authorize(creds)
-    # Google Sheets 문서 이름과 시트 이름
-    # 오늘 날짜 기반 시트 이름
+
     today = datetime.today().strftime("%Y-%m-%d")
     try:
         sheet = client.open("Shooting").worksheet(today)
@@ -114,10 +111,7 @@ def fetch_quiz_data():
         exit()
 
     data = sheet.get_all_records()
-
-    # 퀴즈 데이터: [(한글, 영어, 힌트)]
-    # 힌트 컬럼이 없는 경우 빈 문자열로 처리
-    return [
+    quiz_data = [
         (
             row.get("한글 단어", ""),
             row.get("영어 정답", ""),
@@ -126,48 +120,35 @@ def fetch_quiz_data():
         for row in data
     ]
 
-# 퀴즈 데이터 불러오기
-quiz_data = fetch_quiz_data()
-current_index = 0
-
-def fetch_message_template():
-    """구글시트 msg 시트 첫번째 셀의 메시지를 반환. 없으면 기본 메시지 반환."""
+    # 메시지 템플릿도 같이 가져오기
     COMMON_MSG = (
         "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
         "다음 영어 단어를 맞춰보세요({current_num}/{total_num}):\n\n"
         "'{korean_word}'"
     )
-    scope = [
-        "https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive",
-    ]
-    def resource_path(relative_path):
-        """PyInstaller 환경에서도 파일 경로를 안전하게 가져오기"""
-        if hasattr(sys, "_MEIPASS"):
-            return os.path.join(sys._MEIPASS, relative_path)
-        return os.path.join(os.path.abspath("."), relative_path)
-
     try:
-        creds = ServiceAccountCredentials.from_json_keyfile_name(
-            resource_path("quizapp-credentials.json"), scope
-        )
-        client = gspread.authorize(creds)
-        sheet = client.open("Shooting").worksheet("msg")
-        msg = sheet.cell(1, 1).value
+        msg_sheet = client.open("Shooting").worksheet("msg")
+        msg = msg_sheet.cell(1, 1).value
         if msg and msg.strip():
-            return msg.strip() + "\n\n" + COMMON_MSG
+            message_template = msg.strip() + "\n\n" + COMMON_MSG
+        else:
+            raise Exception
     except Exception:
-        pass
-    # 기본 메시지
-    return (
-        "우리 준기가 오늘 외운 영어 단어로 언젠가\n"
-        "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
-        "그 순간을 위해 지금 우리가 함께\n"
-        "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
-        "그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.\n"
-        "힘들어도 아빠가 끝까지 함께 할게\n\n"
-        + COMMON_MSG
-    )
+        message_template = (
+            "우리 준기가 오늘 외운 영어 단어로 언젠가\n"
+            "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
+            "그 순간을 위해 지금 우리가 함께\n"
+            "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
+            "그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.\n"
+            "힘들어도 아빠가 끝까지 함께 할게\n\n"
+            + COMMON_MSG
+        )
+
+    return quiz_data, message_template
+
+# 퀴즈 데이터 불러오기
+quiz_data, quiz_message_template = fetch_quiz_and_message()
+current_index = 0
 
 # 정답 확인 함수
 def check_answer():
@@ -217,9 +198,6 @@ def update_question():
     # 현재 문제 번호와 전체 문제 수
     current_num = current_index + 1
     total_num = len(quiz_data)
-
-    # 메시지 템플릿 가져오기
-    quiz_message_template = fetch_message_template()
 
     message = quiz_message_template.format(
         current_num=current_num,
