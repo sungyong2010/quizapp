@@ -33,7 +33,8 @@ python -O -m PyInstaller --onefile --windowed --add-data "quizapp-credentials.js
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v0.8.0\n2025-10-27")
+    messagebox.showinfo("버전 정보", "QuizApp v1.0.0\n2025-10-28")
+    # QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
     # QuizApp v0.8.0 : hidden code to exit program added
     # QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
     # QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
