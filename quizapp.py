@@ -137,14 +137,21 @@ def fetch_message_template():
         "다음 영어 단어를 맞춰보세요({current_num}/{total_num}):\n\n"
         "'{korean_word}'"
     )
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ]
+    def resource_path(relative_path):
+        """PyInstaller 환경에서도 파일 경로를 안전하게 가져오기"""
+        if hasattr(sys, "_MEIPASS"):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath("."), relative_path)
+
     try:
-        client = gspread.authorize(ServiceAccountCredentials.from_json_keyfile_name(
-            os.path.join(os.path.abspath("."), "quizapp-credentials.json"),
-            [
-                "https://spreadsheets.google.com/feeds",
-                "https://www.googleapis.com/auth/drive",
-            ]
-        ))
+        creds = ServiceAccountCredentials.from_json_keyfile_name(
+            resource_path("quizapp-credentials.json"), scope
+        )
+        client = gspread.authorize(creds)
         sheet = client.open("Shooting").worksheet("msg")
         msg = sheet.cell(1, 1).value
         if msg and msg.strip():
@@ -161,7 +168,6 @@ def fetch_message_template():
         "힘들어도 아빠가 끝까지 함께 할게\n\n"
         + COMMON_MSG
     )
-
 
 # 정답 확인 함수
 def check_answer():
