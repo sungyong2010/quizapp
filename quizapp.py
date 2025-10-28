@@ -24,7 +24,7 @@ Description:
 - 사용자는 한글 단어에 대한 영어 정답을 입력해야 합니다.
 
 Quiz data format in Google Sheets:
-| 한글 단어 | 영어 정답 |
+| 한글 단어 | 영어 정답 | 힌트 |
 => https://docs.google.com/spreadsheets/d/1BHkAT3j75_jq5qM5p1AZ73NaR4JhcxP7uBeWZRE0CD8/edit?usp=sharing
 
 exe 배포 : 
@@ -114,8 +114,16 @@ def fetch_quiz_data():
 
     data = sheet.get_all_records()
 
-    # 퀴즈 데이터: [(한글, 영어)]
-    return [(row["한글 단어"], row["영어 정답"]) for row in data]
+    # 퀴즈 데이터: [(한글, 영어, 힌트)]
+    # 힌트 컬럼이 없는 경우 빈 문자열로 처리
+    return [
+        (
+            row.get("한글 단어", ""),
+            row.get("영어 정답", ""),
+            row.get("힌트", "")
+        )
+        for row in data
+    ]
 
 
 # 퀴즈 데이터 불러오기
@@ -166,13 +174,17 @@ def check_answer():
 def update_question():
     entry.delete(0, tk.END)
     korean_word = quiz_data[current_index][0]
+    hint = quiz_data[current_index][2]  # 힌트 컬럼
 
     # 현재 문제 번호와 전체 문제 수
     current_num = current_index + 1
     total_num = len(quiz_data)
 
-    # 준기에게 보내는 메시지
+    # 메시지 생성 (힌트는 별도 라벨로 표시)
     message = f"""우리 준기가 오늘 외운 영어 단어로 언젠가
+외국 친구들과 웃으며 이야기하는 모습을 상상해봐.
+
+그 순간을 위해 지금 우리가 함께
 외국 친구들과 웃으며 이야기하는 모습을 상상해봐.
 
 그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.
@@ -186,10 +198,24 @@ def update_question():
 
     label.config(text=message)
 
+    # 힌트 라벨 업데이트 (없으면 생성)
+    hint_text = f"({hint})" if hint else ""
+    if not hasattr(update_question, "hint_label"):
+        update_question.hint_label = tk.Label(
+            root,
+            text=hint_text,
+            font=("Arial", int(28 * 0.7)),  # 70% 크기
+            fg="yellow",
+            bg="black"
+        )
+        update_question.hint_label.pack()
+    else:
+        update_question.hint_label.config(text=hint_text)
+
     # 포커스 강제 설정 (지연 후 재적용 및 독점 포커스)
     entry.focus_set()
     entry.grab_set()  # 입력 필드가 포커스를 독점
-    root.after(100, lambda: entry.focus_set())  # 100ms 후 다시 포커스
+    root.after(100, lambda: entry.focus_set())
 
 
 # 디버그 모드 설정 (C언어의 #ifdef DEBUG와 유사)
