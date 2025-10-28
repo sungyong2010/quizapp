@@ -181,20 +181,24 @@ def update_question():
     total_num = len(quiz_data)
 
     # 메시지 생성 (힌트는 별도 라벨로 표시)
-    message = f"""우리 준기가 오늘 외운 영어 단어로 언젠가
-외국 친구들과 웃으며 이야기하는 모습을 상상해봐.
+    # 문제 메시지 템플릿
+    quiz_message_template = (
+        "우리 준기가 오늘 외운 영어 단어로 언젠가\n"
+        "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
+        "그 순간을 위해 지금 우리가 함께\n"
+        "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
+        "그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.\n"
+        "힘들어도 아빠가 끝까지 함께 할게\n\n"
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "다음 영어 단어를 맞춰보세요({current_num}/{total_num}):\n\n"
+        "'{korean_word}'"
+    )
 
-그 순간을 위해 지금 우리가 함께
-외국 친구들과 웃으며 이야기하는 모습을 상상해봐.
-
-그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.
-힘들어도 아빠가 끝까지 함께 할게
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-다음 영어 단어를 맞춰보세요({current_num}/{total_num}):
-
-'{korean_word}'"""
+    message = quiz_message_template.format(
+        current_num=current_num,
+        total_num=total_num,
+        korean_word=korean_word
+    )
 
     label.config(text=message)
 
