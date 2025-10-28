@@ -429,5 +429,6 @@ else:
     # DEBUG 모드에서는 정상적으로 창 닫기 허용
     root.protocol("WM_DELETE_WINDOW", on_closing)
 
-update_question()
-root.mainloop()
+if __name__ == "__main__":
+    update_question()
+    root.mainloop()
