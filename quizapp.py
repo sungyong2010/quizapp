@@ -132,6 +132,11 @@ current_index = 0
 
 def fetch_message_template():
     """구글시트 msg 시트 첫번째 셀의 메시지를 반환. 없으면 기본 메시지 반환."""
+    COMMON_MSG = (
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
+        "다음 영어 단어를 맞춰보세요({current_num}/{total_num}):\n\n"
+        "'{korean_word}'"
+    )
     try:
         client = gspread.authorize(ServiceAccountCredentials.from_json_keyfile_name(
             os.path.join(os.path.abspath("."), "quizapp-credentials.json"),
@@ -143,7 +148,7 @@ def fetch_message_template():
         sheet = client.open("Shooting").worksheet("msg")
         msg = sheet.cell(1, 1).value
         if msg and msg.strip():
-            return msg
+            return msg.strip() + "\n\n" + COMMON_MSG
     except Exception:
         pass
     # 기본 메시지
@@ -154,9 +159,7 @@ def fetch_message_template():
         "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
         "그 순간을 위해 지금 우리가 함께 노력하고 있는 거야.\n"
         "힘들어도 아빠가 끝까지 함께 할게\n\n"
-        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n"
-        "다음 영어 단어를 맞춰보세요({current_num}/{total_num}):\n\n"
-        "'{korean_word}'"
+        + COMMON_MSG
     )
 
 
