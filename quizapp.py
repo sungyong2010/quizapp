@@ -15,6 +15,9 @@ import win32gui
 import win32process
 import threading
 import signal
+import smtplib
+from email.mime.text import MIMEText
+import winsound
 
 """
 Description:
@@ -28,12 +31,17 @@ Quiz data format in Google Sheets:
 => https://docs.google.com/spreadsheets/d/1BHkAT3j75_jq5qM5p1AZ73NaR4JhcxP7uBeWZRE0CD8/edit?usp=sharing
 
 exe 배포 : 
-python -O -m PyInstaller --onefile --windowed --add-data "quizapp-credentials.json;." quizapp.py
+python -O -m PyInstaller --onefile --windowed `
+    --add-data "quizapp-credentials.json;." `
+    --add-data "correct.wav;." `
+    --add-data "wrong.wav;." `
+    quizapp.py
 """
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.1.0\n2025-10-28")
+    messagebox.showinfo("버전 정보", "QuizApp v1.2.0\n2025-10-29")
+    # QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
     # QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
     # QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
     # QuizApp v0.8.0 : hidden code to exit program added
@@ -150,44 +158,112 @@ def fetch_quiz_and_message():
 quiz_data, quiz_message_template = fetch_quiz_and_message()
 current_index = 0
 
+# 오답 리스트 및 정답 카운트 관리
+wrong_list = []
+total_attempts = 0
+correct_count = 0
+quiz_round = 1
+initial_total_count = len(quiz_data)  # 최초 문제 개수 저장
+
+# 라운드별 시도/정답 수 초기화
+round_attempts = 0
+round_correct = 0
+
+# 메일 발송 함수
+def send_wrong_list_email(wrong_list):
+    sender = "sungyong2010@gmail.com"
+    receiver = "sungyong2010@gmail.com"
+    password = "lbzx rzqb tszp geee"  # 앱 비밀번호 사용 권장
+    subject = "QuizApp 오답 리스트"
+    body = "\n".join([f"{item[0]} → {item[1]} (힌트: {item[2]})" for item in wrong_list])
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = sender
+    msg["To"] = receiver
+
+    logging.info("메일 발송 시도: SMTP 연결 시작")
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+            logging.info("SMTP 연결 성공, 로그인 시도")
+            smtp.login(sender, password)
+            logging.info("로그인 성공, 메일 발송 시도")
+            smtp.sendmail(sender, receiver, msg.as_string())
+        logging.info("오답 리스트 메일 발송 완료")
+    except Exception as e:
+        logging.error(f"메일 발송 실패: {e}")
+
+# 누적 정답/시도 수를 별도 변수로 관리
+total_attempts = 0
+correct_count = 0
+
 # 정답 확인 함수
-def check_answer():
-    global current_index
+def check_answer(event=None):
+    def resource_path(relative_path):
+        if hasattr(sys, "_MEIPASS"):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath("."), relative_path)
+
+    global current_index, correct_count, total_attempts, wrong_list, round_attempts, round_correct
     user_input = entry.get().strip()
-    
-    # 숨겨진 종료 코드 확인 (대소문자 구분 없음)
-    if user_input == "dkfmaekdns":
-        logging.info("숨겨진 종료 코드 입력됨 - 프로그램 종료")
-        messagebox.showinfo("종료", "프로그램을 종료합니다.")
+    user_input_lower = user_input.lower()
+    correct_answer = quiz_data[current_index][1].lower()
+
+    round_attempts += 1
+    total_attempts += 1
+
+    if user_input_lower == correct_answer:
+        round_correct += 1
+        correct_count += 1
+        # winsound.MessageBeep(winsound.MB_OK)
+        # winsound.PlaySound("correct.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+        winsound.PlaySound(resource_path("correct.wav"), winsound.SND_FILENAME | winsound.SND_ASYNC)
+        messagebox.showinfo("정답", "정답입니다!")
+    else:
+        wrong_list.append(quiz_data[current_index])
+        # winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+        # winsound.PlaySound("wrong.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+        winsound.PlaySound(resource_path("wrong.wav"), winsound.SND_FILENAME | winsound.SND_ASYNC)
+        messagebox.showinfo("오답", "오답입니다!")
+
+    current_index += 1
+    if current_index >= len(quiz_data):
+        process_quiz_end()
+    else:
+        update_question()  # 한 번만 호출
+
+def process_quiz_end():
+    global quiz_data, current_index, wrong_list, quiz_round, round_attempts, round_correct, initial_total_count
+    # 전체 누적 정답율 계산 (초기 문제 개수 기준)
+    accuracy = correct_count / initial_total_count if initial_total_count else 0
+    logging.info(f"퀴즈 종료 체크: 전체 시도={total_attempts}, 전체 정답={correct_count}, 정답율={accuracy:.3f}, 라운드={quiz_round}")
+
+    if accuracy >= 0.8:
+        send_wrong_list_email(wrong_list)
+        logging.info("정답율 80% 이상, 퀴즈 종료 및 메일 발송")
+        messagebox.showinfo("성공!", f"정답율(누적): {accuracy*100:.1f}%\n퀴즈를 종료합니다.")
         process_monitor.stop_monitoring()
-        # 종료 직전에 explorer.exe 복구
-        # subprocess.Popen("explorer.exe")
         unblock_windows_key()
         root.destroy()
         sys.exit()
-        return
-    
-    # 일반적인 정답 확인 (소문자로 변환)e
-    user_input_lower = user_input.lower()
-    correct_answer = quiz_data[current_index][1].lower()
-    
-    if user_input_lower == correct_answer:
-        current_index += 1
-        if current_index >= len(quiz_data):
-            messagebox.showinfo("성공!", "모든 문제를 맞췄습니다!")
+    else:
+        if not wrong_list:
+            logging.info("오답 리스트 없음, 퀴즈 종료")
+            messagebox.showinfo("종료", f"정답율(누적): {accuracy*100:.1f}%\n모든 문제를 맞추지 못했습니다. 퀴즈를 종료합니다.")
             process_monitor.stop_monitoring()
-            # 종료 직전에 explorer.exe 복구
-            # subprocess.Popen("explorer.exe")
             unblock_windows_key()
             root.destroy()
             sys.exit()
         else:
+            quiz_data = wrong_list.copy()
+            current_index = 0
+            quiz_round += 1
+            wrong_list = []
+            # 라운드별 시도/정답 수 초기화
+            round_attempts = 0
+            round_correct = 0
+            logging.info(f"오답 문제로 재도전: 라운드 {quiz_round}, 현재 정답율={accuracy:.3f}")
+            messagebox.showinfo("재도전", f"정답율(누적): {accuracy*100:.1f}%\n오답 문제로 다시 퀴즈를 진행합니다. (Round {quiz_round})")
             update_question()
-    else:
-        messagebox.showerror("틀렸습니다", "정답이 아닙니다. 다시 시도하세요.")
-        # 오답 후 입력 필드 초기화
-        entry.delete(0, tk.END)
-
 
 # 문제 업데이트
 def update_question():
@@ -223,7 +299,7 @@ def update_question():
 
     # 포커스 강제 설정 (지연 후 재적용 및 독점 포커스)
     entry.focus_set()
-    entry.grab_set()  # 입력 필드가 포커스를 독점
+    # entry.grab_set()  # 입력 필드가 포커스를 독점 => [정답 제출] 버튼 클릭 불가
     root.after(100, lambda: entry.focus_set())
 
 
@@ -269,7 +345,9 @@ def terminate_foreground_processes(safe_processes=None):
             , "windowsterminal.exe"
             , "wt.exe"
             , "openonsole.exe"
-            # , "explorer.exe"
+            , "explorer.exe"
+            , "totalcmd64.exe"
+            , "notepad++.exe"
         ]
         
         # DEBUG 모드에서만 chrome.exe 허용 (C언어 #ifdef DEBUG와 유사)
