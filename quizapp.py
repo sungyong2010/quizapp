@@ -40,7 +40,8 @@ python -O -m PyInstaller --onefile --windowed `
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.2.0\n2025-10-29")
+    messagebox.showinfo("버전 정보", "QuizApp v1.3.0\n2025-10-30")
+    # QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
     # QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
     # QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
     # QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
