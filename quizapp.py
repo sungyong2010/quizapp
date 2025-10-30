@@ -196,6 +196,10 @@ def send_wrong_list_email(wrong_list):
 total_attempts = 0
 correct_count = 0
 
+# 오답 리스트 및 정답 카운트 관리
+wrong_list = []
+all_wrong_list = []  # 모든 라운드의 오답을 누적
+
 # 정답 확인 함수
 def check_answer(event=None):
     def resource_path(relative_path):
@@ -220,6 +224,7 @@ def check_answer(event=None):
         messagebox.showinfo("정답", "정답입니다!")
     else:
         wrong_list.append(quiz_data[current_index])
+        all_wrong_list.append(quiz_data[current_index])  # 모든 오답 누적
         # winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
         # winsound.PlaySound("wrong.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
         winsound.PlaySound(resource_path("wrong.wav"), winsound.SND_FILENAME | winsound.SND_ASYNC)
@@ -238,7 +243,8 @@ def process_quiz_end():
     logging.info(f"퀴즈 종료 체크: 전체 시도={total_attempts}, 전체 정답={correct_count}, 정답율={accuracy:.3f}, 라운드={quiz_round}")
 
     if accuracy >= 0.8:
-        send_wrong_list_email(wrong_list)
+        # send_wrong_list_email(wrong_list)
+        send_wrong_list_email(all_wrong_list)  # 모든 라운드의 오답을 메일로 발송
         logging.info("정답율 80% 이상, 퀴즈 종료 및 메일 발송")
         messagebox.showinfo("성공!", f"정답율(누적): {accuracy*100:.1f}%\n퀴즈를 종료합니다.")
         process_monitor.stop_monitoring()
