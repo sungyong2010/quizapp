@@ -182,7 +182,8 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
     password = "lbzx rzqb tszp geee"  # 앱 비밀번호 사용 권장
     subject = "QuizApp 오답 리스트"
     # 각 항목을 탭으로 구분하여 한 줄씩 나열=>엑셀에 붙여 넣기 좋게 발송
-    body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in unique_wrong_list])
+    # body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in unique_wrong_list])
+    body = "\n".join([f"{item[0]} → {item[1]} (힌트: {item[2]})" for item in unique_wrong_list])
     if elapsed_time is not None:
         body = (
             "오답 리스트는 구글 시트에 지속적으로 업데이트해 주세요.\n"
