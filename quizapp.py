@@ -185,7 +185,10 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
     # 각 항목을 탭으로 구분하여 한 줄씩 나열=>엑셀에 붙여 넣기 좋게 발송
     body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in unique_wrong_list])
     if elapsed_time is not None:
-        body = f"[전체 수행시간: {elapsed_time:.1f}초]\n\n" + body
+        body = (
+            "오답 리스트는 구글 시트에 지속적으로 업데이트해 주세요.\n"
+            f"[전체 수행시간: {elapsed_time:.1f}초]\n\n" + body
+        )
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = sender
