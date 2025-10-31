@@ -37,10 +37,12 @@ python -O -m PyInstaller --onefile --windowed `
     --add-data "wrong.wav;." `
     quizapp.py
 """
+quiz_start_time = time.time()
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.3.0\n2025-10-30")
+    messagebox.showinfo("버전 정보", "QuizApp v1.3.1\n2025-10-31")
+    # QuizApp v1.3.1 : 메일 본문에 전체 수행시간 포함
     # QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
     # QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
     # QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
@@ -171,12 +173,15 @@ round_attempts = 0
 round_correct = 0
 
 # 메일 발송 함수
-def send_wrong_list_email(wrong_list):
+def send_wrong_list_email(wrong_list, elapsed_time=None):
     sender = "sungyong2010@gmail.com"
     receiver = "sungyong2010@gmail.com"
     password = "lbzx rzqb tszp geee"  # 앱 비밀번호 사용 권장
     subject = "QuizApp 오답 리스트"
-    body = "\n".join([f"{item[0]} → {item[1]} (힌트: {item[2]})" for item in wrong_list])
+    # 각 항목을 탭으로 구분하여 한 줄씩 나열=>엑셀에 붙여 넣기 좋게 발송
+    body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in wrong_list])
+    if elapsed_time is not None:
+        body = f"[전체 수행시간: {elapsed_time:.1f}초]\n\n" + body
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = sender
@@ -241,11 +246,12 @@ def process_quiz_end():
     global quiz_data, current_index, wrong_list, quiz_round, round_attempts, round_correct, initial_total_count
     # 전체 누적 정답율 계산 (초기 문제 개수 기준)
     accuracy = correct_count / initial_total_count if initial_total_count else 0
+    elapsed_time = time.time() - quiz_start_time  # 수행시간 계산
     logging.info(f"퀴즈 종료 체크: 전체 시도={total_attempts}, 전체 정답={correct_count}, 정답율={accuracy:.3f}, 라운드={quiz_round}")
 
     if accuracy >= 0.8:
         # send_wrong_list_email(wrong_list)
-        send_wrong_list_email(all_wrong_list)  # 모든 라운드의 오답을 메일로 발송
+        send_wrong_list_email(all_wrong_list, elapsed_time)  # 모든 라운드의 오답을 메일로 발송, 수행시간 포함
         logging.info("정답율 80% 이상, 퀴즈 종료 및 메일 발송")
         messagebox.showinfo("성공!", f"정답율(누적): {accuracy*100:.1f}%\n퀴즈를 종료합니다.")
         process_monitor.stop_monitoring()
