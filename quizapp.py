@@ -39,24 +39,6 @@ python -O -m PyInstaller --onefile --windowed `
 """
 quiz_start_time = time.time()
 
-# F1 키로 버전 정보 보기
-def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.3.3\n2025-10-31")
-    # QuizApp v1.3.3 : 창을 항상 최상위로 설정
-    # QuizApp v1.3.2 : 오답리스트 메일 발송시 중복 제거 및 튜플 기준 정리
-    # QuizApp v1.3.1 : 메일 본문에 전체 수행시간 포함
-    # QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
-    # QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
-    # QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
-    # QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
-    # QuizApp v0.8.0 : hidden code to exit program added
-    # QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
-    # QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
-    # QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
-    # QuizApp v0.4.0 : 프로세스 종료 로그 추가
-    # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
-
-
 # 로그 설정
 # 로그 디렉터리 확인 및 생성
 log_dir = r"C:\temp"
@@ -96,6 +78,23 @@ def on_closing():
     unblock_windows_key()
     root.destroy()
 
+# F1 키로 버전 정보 보기
+def show_version():
+    messagebox.showinfo("버전 정보", "QuizApp v1.3.4\n2025-10-31")
+    # QuizApp v1.3.4 : 오답리스트 메일 발송시 수신자 여러명 지원
+    # QuizApp v1.3.3 : 창을 항상 최상위로 설정
+    # QuizApp v1.3.2 : 오답리스트 메일 발송시 중복 제거 및 튜플 기준 정리
+    # QuizApp v1.3.1 : 메일 본문에 전체 수행시간 포함
+    # QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
+    # QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
+    # QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
+    # QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
+    # QuizApp v0.8.0 : hidden code to exit program added
+    # QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
+    # QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
+    # QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
+    # QuizApp v0.4.0 : 프로세스 종료 로그 추가
+    # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
 
 # Google Sheets API 인증 설정
 # 퀴즈 데이터와 메시지 템플릿을 한 번에 가져오기
@@ -180,6 +179,7 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
     unique_wrong_list = list({(item[0], item[1], item[2]) for item in wrong_list})
     sender = "sungyong2010@gmail.com"
     receiver = "sungyong2010@gmail.com"
+    receiver = ["sungyong2010@gmail.com", "seerazeene@gmail.com"]  # 여러 명을 리스트로
     password = "lbzx rzqb tszp geee"  # 앱 비밀번호 사용 권장
     subject = "QuizApp 오답 리스트"
     # 각 항목을 탭으로 구분하여 한 줄씩 나열=>엑셀에 붙여 넣기 좋게 발송
