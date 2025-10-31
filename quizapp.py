@@ -41,7 +41,8 @@ quiz_start_time = time.time()
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.3.1\n2025-10-31")
+    messagebox.showinfo("버전 정보", "QuizApp v1.3.2\n2025-10-31")
+    # QuizApp v1.3.2 : 오답리스트 메일 발송시 중복 제거 및 튜플 기준 정리
     # QuizApp v1.3.1 : 메일 본문에 전체 수행시간 포함
     # QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
     # QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
@@ -174,12 +175,14 @@ round_correct = 0
 
 # 메일 발송 함수
 def send_wrong_list_email(wrong_list, elapsed_time=None):
+    # 중복 제거: (한글 단어, 영어 정답, 힌트) 튜플 기준
+    unique_wrong_list = list({(item[0], item[1], item[2]) for item in wrong_list})
     sender = "sungyong2010@gmail.com"
     receiver = "sungyong2010@gmail.com"
     password = "lbzx rzqb tszp geee"  # 앱 비밀번호 사용 권장
     subject = "QuizApp 오답 리스트"
     # 각 항목을 탭으로 구분하여 한 줄씩 나열=>엑셀에 붙여 넣기 좋게 발송
-    body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in wrong_list])
+    body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in unique_wrong_list])
     if elapsed_time is not None:
         body = f"[전체 수행시간: {elapsed_time:.1f}초]\n\n" + body
     msg = MIMEText(body)
