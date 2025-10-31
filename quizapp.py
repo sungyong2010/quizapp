@@ -191,7 +191,7 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
     msg = MIMEText(body)
     msg["Subject"] = subject
     msg["From"] = sender
-    msg["To"] = receiver
+    msg["To"] = ", ".join(receiver)  # 콤마로 연결된 문자열
 
     logging.info("메일 발송 시도: SMTP 연결 시작")
     try:
