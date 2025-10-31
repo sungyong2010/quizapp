@@ -41,7 +41,8 @@ quiz_start_time = time.time()
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.3.2\n2025-10-31")
+    messagebox.showinfo("버전 정보", "QuizApp v1.3.3\n2025-10-31")
+    # QuizApp v1.3.3 : 창을 항상 최상위로 설정
     # QuizApp v1.3.2 : 오답리스트 메일 발송시 중복 제거 및 튜플 기준 정리
     # QuizApp v1.3.1 : 메일 본문에 전체 수행시간 포함
     # QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
@@ -471,6 +472,7 @@ root.overrideredirect(True)  # 타이틀바 및 최소/최대/닫기 버튼 제�
 root.protocol("WM_DELETE_WINDOW", on_closing)
 block_windows_key()
 root.configure(bg="black")
+root.attributes("-topmost", True) # 창을 항상 최상위로 설정
 
 # ✅ 포커스 강제 설정
 root.focus_force()
