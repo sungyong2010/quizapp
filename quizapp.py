@@ -178,7 +178,6 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
     # 중복 제거: (한글 단어, 영어 정답, 힌트) 튜플 기준
     unique_wrong_list = list({(item[0], item[1], item[2]) for item in wrong_list})
     sender = "sungyong2010@gmail.com"
-    receiver = "sungyong2010@gmail.com"
     receiver = ["sungyong2010@gmail.com", "seerazeene@gmail.com"]  # 여러 명을 리스트로
     password = "lbzx rzqb tszp geee"  # 앱 비밀번호 사용 권장
     subject = "QuizApp 오답 리스트"
