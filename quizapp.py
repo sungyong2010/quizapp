@@ -185,9 +185,13 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
     # body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in unique_wrong_list])
     body = "\n".join([f"{item[0]} → {item[1]} (힌트: {item[2]})" for item in unique_wrong_list])
     if elapsed_time is not None:
+        h = int(elapsed_time // 3600)
+        m = int((elapsed_time % 3600) // 60)
+        s = int(elapsed_time % 60)
+        time_str = f"{h:02d}:{m:02d}:{s:02d}"
         body = (
-            "오답 리스트는 구글 시트에 지속적으로 업데이트해 주세요.\n"
-            f"[전체 수행시간: {elapsed_time:.1f}초]\n\n" + body
+            "오답 리스트는 반복학습 할 수 있도록 구글 시트에 지속적으로 업데이트해 주세요.\n"
+            f"[전체 수행시간: {time_str}]\n\n" + body
         )
     msg = MIMEText(body)
     msg["Subject"] = subject
