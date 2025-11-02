@@ -202,7 +202,7 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
         s = int(elapsed_time % 60)
         time_str = f"{h:02d}:{m:02d}:{s:02d}"
         body = (
-            "오답 리스트는 반복학습 할 수 있도록 구글 시트에 지속적으로 업데이트해 주세요.\n"
+            "오답 리스트는 반복 학습할 수 있도록 구글 시트에 지속적으로 업데이트해 주세요.\n"
             f"[전체 수행시간: {time_str}]\n\n" + body
         )
     msg = MIMEText(body)
