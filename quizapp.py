@@ -618,6 +618,7 @@ def check_for_update(current_version=APP_VERSION):
 
 def download_and_replace_exe(download_url):
     try:
+        messagebox.showinfo("업데이트", "새 버전 다운로드 중입니다. 잠시만 기다려 주세요...")
         response = requests.get(download_url)
         with open("QuizApp_new.exe", "wb") as f:
             f.write(response.content)
@@ -627,6 +628,7 @@ def download_and_replace_exe(download_url):
         sys.exit()
     except Exception as e:
         logging.error(f"업데이트 다운로드 실패: {e}")
+        messagebox.showerror("업데이트 오류", f"다운로드 중 오류 발생: {e}")
 
 def overwrite_old_exe():
     old_exe = "QuizApp.exe"
@@ -647,8 +649,8 @@ if __name__ == "__main__":
         overwrite_old_exe()
 
     update_url = check_for_update()
+    logging.info(f"check_for_update 결과: update_url={update_url}")
     if update_url:
-        logging.info(f"업데이트 URL: {update_url}")  # 디버깅용 로그 추가
         messagebox.showinfo("업데이트", "새 버전이 있습니다. 자동으로 업데이트합니다.")
         try:
             download_and_replace_exe(update_url)
