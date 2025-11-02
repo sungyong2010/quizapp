@@ -21,6 +21,8 @@ import winsound
 import requests
 import json
 import shutil
+import tempfile
+import ctypes
 
 """
 Description:
@@ -42,8 +44,9 @@ python -O -m PyInstaller --onefile --windowed `
 """
 quiz_start_time = time.time()
 
-APP_VERSION = "1.4.5"
 APP_VERSION_DATE = "2025-11-02"
+APP_VERSION = "1.4.6"
+# QuizApp v1.4.6 : Fix - 업데이트 다운로드 및 실행 경로 수정
 # QuizApp v1.4.5 : 업데이트 다운로드 및 실행 final test
 # QuizApp v1.4.4 : Fix - 업데이트 다운로드 및 실행
 # QuizApp v1.4.3 : Fix - 업데이트 다운로드 및 실행 중 오류 처리 추가
@@ -619,35 +622,66 @@ def check_for_update(current_version=APP_VERSION):
 
 def download_and_replace_exe(download_url):
     try:
+        import tempfile
+        temp_dir = tempfile.gettempdir()
+        temp_exe_path = os.path.join(temp_dir, "quizapp_new.exe")
         messagebox.showinfo("업데이트", "새 버전 다운로드 중입니다. 잠시만 기다려 주세요...")
         response = requests.get(download_url)
-        with open("quizapp_new.exe", "wb") as f:
+        with open(temp_exe_path, "wb") as f:
             f.write(response.content)
-
-        # 기존 exe 종료 후 새 exe 실행
-        subprocess.Popen(["quizapp_new.exe"])
+        # 임시 폴더에 저장된 새 exe 실행
+        subprocess.Popen([temp_exe_path])
         sys.exit()
     except Exception as e:
         logging.error(f"업데이트 다운로드 실패: {e}")
         messagebox.showerror("업데이트 오류", f"다운로드 중 오류 발생: {e}")
 
+def run_as_admin():
+    if not ctypes.windll.shell32.IsUserAnAdmin():
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", sys.executable, " ".join(sys.argv), None, 1
+        )
+        sys.exit()
+
 def overwrite_old_exe():
-    old_exe = "quizapp.exe"
-    new_exe = sys.argv[0]
-    # 기존 exe가 실행 중이면 잠시 대기
+    temp_dir = tempfile.gettempdir()
+    new_exe = os.path.join(temp_dir, "quizapp_new.exe")
+    old_exe = os.path.join(os.path.dirname(sys.argv[0]), "quizapp.exe")
+
+    # 관리자 권한 체크 및 요청 코드
+    try:
+        is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+    except Exception:
+        is_admin = False
+
+    if not is_admin:
+        # 관리자 권한으로 재실행
+        ctypes.windll.shell32.ShellExecuteW(
+            None, "runas", sys.executable, f'"{new_exe}" --overwrite', None, 1
+        )
+        sys.exit()
+
     for _ in range(10):
-        try:
-            os.remove(old_exe)
+        if os.path.exists(old_exe):
+            try:
+                os.remove(old_exe)
+                break
+            except PermissionError:
+                time.sleep(0.5)
+        else:
             break
-        except PermissionError:
-            time.sleep(0.5)
     shutil.move(new_exe, old_exe)
     os.startfile(old_exe)
-    sys.exit()        
+    sys.exit()   
 
 if __name__ == "__main__":
-    if os.path.basename(sys.argv[0]).lower() == "quizapp_new.exe":
-        overwrite_old_exe()
+    # if os.path.basename(sys.argv[0]).lower() == "quizapp_new.exe":
+    #     overwrite_old_exe()
+    temp_dir = tempfile.gettempdir()
+    temp_exe_path = os.path.join(temp_dir, "quizapp_new.exe")
+    # 임시 폴더에 quizapp_new.exe가 존재하면 overwrite 시도
+    if os.path.exists(temp_exe_path):
+        overwrite_old_exe()   
 
     update_url = check_for_update()
     logging.info(f"check_for_update 결과: update_url={update_url}")
