@@ -18,6 +18,7 @@ import signal
 import smtplib
 from email.mime.text import MIMEText
 import winsound
+import requests
 
 """
 Description:
@@ -38,6 +39,25 @@ python -O -m PyInstaller --onefile --windowed `
     quizapp.py
 """
 quiz_start_time = time.time()
+
+APP_VERSION = "1.4.1"
+APP_VERSION_DATE = "2025-11-02"
+# QuizApp v1.4.1 : 업데이트 확인 기능 추가
+# QuizApp v1.4.0 : 숨겨진 코드 입력 시 프로그램 종료 기능 추가, 2번 이상 오다답 시 정답 표시
+# QuizApp v1.3.4 : 오답리스트 메일 발송시 수신자 여러명 지원
+# QuizApp v1.3.3 : 창을 항상 최상위로 설정
+# QuizApp v1.3.2 : 오답리스트 메일 발송시 중복 제거 및 튜플 기준 정리
+# QuizApp v1.3.1 : 메일 본문에 전체 수행시간 포함
+# QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
+# QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
+# QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
+# QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
+# QuizApp v0.8.0 : hidden code to exit program added
+# QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
+# QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
+# QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
+# QuizApp v0.4.0 : 프로세스 종료 로그 추가
+# QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
 
 # 로그 설정
 # 로그 디렉터리 확인 및 생성
@@ -78,24 +98,10 @@ def on_closing():
     unblock_windows_key()
     root.destroy()
 
+
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.4.0\n2025-11-02")
-    # QuizApp v1.4.0 : 숨겨진 코드 입력 시 프로그램 종료 기능 추가, 2번 이상 오다답 시 정답 표시
-    # QuizApp v1.3.4 : 오답리스트 메일 발송시 수신자 여러명 지원
-    # QuizApp v1.3.3 : 창을 항상 최상위로 설정
-    # QuizApp v1.3.2 : 오답리스트 메일 발송시 중복 제거 및 튜플 기준 정리
-    # QuizApp v1.3.1 : 메일 본문에 전체 수행시간 포함
-    # QuizApp v1.3.0 : 오답 리스트를 모든 라운드에서 누적하여 메일 발송
-    # QuizApp v1.2.0 : 정답/오답 사운드 효과 추가, Gmail로 오답 리스트 전송
-    # QuizApp v1.1.0 : Google Sheets 메시지 템플릿 기능 추가 개선
-    # QuizApp v1.0.0 : Google Sheets 메시지 템플릿 기능 추가
-    # QuizApp v0.8.0 : hidden code to exit program added
-    # QuizApp v0.7.0 : 로블록스 프로세스 종료 기능 추가
-    # QuizApp v0.6.0 : cmd.exe 에 대한 예외 처리 추가
-    # QuizApp v0.5.0 : foreground 프로세스 종료 시 로그 기록 추가
-    # QuizApp v0.4.0 : 프로세스 종료 로그 추가
-    # QuizApp v0.3.0 : Google Sheets에서 오늘 날짜 시트를 불러오도록 수정
+    messagebox.showinfo("버전 정보", f"QuizApp v{APP_VERSION}\n{APP_VERSION_DATE}")
 
 # Google Sheets API 인증 설정
 # 퀴즈 데이터와 메시지 템플릿을 한 번에 가져오기
@@ -564,6 +570,35 @@ else:
     # DEBUG 모드에서는 정상적으로 창 닫기 허용
     root.protocol("WM_DELETE_WINDOW", on_closing)
 
+def check_for_update(current_version=APP_VERSION):
+    try:
+        response = requests.get("https://github.com/sungyong2010/anything-to-share/blob/main/Quizapp/version.json")
+        data = response.json()
+        latest_version = data["latest_version"]
+        download_url = data["download_url"]
+
+        if latest_version != current_version:
+            return download_url
+    except Exception as e:
+        logging.warning(f"업데이트 체크 실패: {e}")
+    return None
+
+def download_and_replace_exe(download_url):
+    try:
+        response = requests.get(download_url)
+        with open("QuizApp_new.exe", "wb") as f:
+            f.write(response.content)
+
+        # 기존 exe 종료 후 새 exe 실행
+        subprocess.Popen(["QuizApp_new.exe"])
+        sys.exit()
+    except Exception as e:
+        logging.error(f"업데이트 다운로드 실패: {e}")
+
 if __name__ == "__main__":
+    update_url = check_for_update()
+    if update_url:
+        messagebox.showinfo("업데이트", "새 버전이 있습니다. 자동으로 업데이트합니다.")
+        download_and_replace_exe(update_url)
     update_question()
     root.mainloop()
