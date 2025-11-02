@@ -80,7 +80,8 @@ def on_closing():
 
 # F1 키로 버전 정보 보기
 def show_version():
-    messagebox.showinfo("버전 정보", "QuizApp v1.3.4\n2025-10-31")
+    messagebox.showinfo("버전 정보", "QuizApp v1.4.0\n2025-11-02")
+    # QuizApp v1.4.0 : 숨겨진 코드 입력 시 프로그램 종료 기능 추가, 2번 이상 오다답 시 정답 표시
     # QuizApp v1.3.4 : 오답리스트 메일 발송시 수신자 여러명 지원
     # QuizApp v1.3.3 : 창을 항상 최상위로 설정
     # QuizApp v1.3.2 : 오답리스트 메일 발송시 중복 제거 및 튜플 기준 정리
@@ -138,14 +139,25 @@ def fetch_quiz_and_message():
         "다음 영어 단어를 맞춰보세요({current_num}/{total_num}):\n\n"
         "'{korean_word}'"
     )
+    msg_value = None
+    hidden_code_value = None
     try:
-        msg_sheet = client.open("Shooting").worksheet("msg")
-        msg = msg_sheet.cell(1, 1).value
-        if msg and msg.strip():
-            message_template = msg.strip() + "\n\n" + COMMON_MSG
+        info_sheet = client.open("Shooting").worksheet("info")
+        info_data = info_sheet.get_all_values()
+        for row in info_data:
+            if len(row) >= 2:
+                key = row[0].strip().lower()
+                value = row[1].strip()
+                if key == "message":
+                    msg_value = value
+                elif key == "hidden code":
+                    hidden_code_value = value
+        if msg_value:
+            message_template = msg_value + "\n\n" + COMMON_MSG
         else:
-            raise Exception
-    except Exception:
+            raise Exception("msg 값 없음")
+    except Exception as e:
+        logging.error(f"info 시트에서 msg/hidden code 값 읽기 실패: {e}")
         message_template = (
             "우리 준기가 오늘 외운 영어 단어로 언젠가\n"
             "외국 친구들과 웃으며 이야기하는 모습을 상상해봐.\n\n"
@@ -156,10 +168,10 @@ def fetch_quiz_and_message():
             + COMMON_MSG
         )
 
-    return quiz_data, message_template
+    return quiz_data, message_template, hidden_code_value
 
 # 퀴즈 데이터 불러오기
-quiz_data, quiz_message_template = fetch_quiz_and_message()
+quiz_data, quiz_message_template, exit_code = fetch_quiz_and_message()
 current_index = 0
 
 # 오답 리스트 및 정답 카운트 관리
@@ -228,6 +240,13 @@ def check_answer(event=None):
     user_input = entry.get().strip()
     user_input_lower = user_input.lower()
     correct_answer = quiz_data[current_index][1].lower()
+    # hidden code(=exit_code) 입력 시 즉시 종료
+    if exit_code and user_input == exit_code:
+        messagebox.showinfo("종료", "숨겨진 코드가 입력되어 프로그램을 종료합니다.")
+        process_monitor.stop_monitoring()
+        unblock_windows_key()
+        root.destroy()
+        sys.exit()
 
     round_attempts += 1
     total_attempts += 1
@@ -245,7 +264,11 @@ def check_answer(event=None):
         # winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
         # winsound.PlaySound("wrong.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
         winsound.PlaySound(resource_path("wrong.wav"), winsound.SND_FILENAME | winsound.SND_ASYNC)
-        messagebox.showinfo("오답", "오답입니다!")
+        correct_answer_text = quiz_data[current_index][1]
+        if quiz_round < 3:
+            messagebox.showinfo("오답", "오답입니다!")
+        else:
+            messagebox.showinfo("오답", f"오답입니다!\n정답: {correct_answer_text}")
 
     current_index += 1
     if current_index >= len(quiz_data):
