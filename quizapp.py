@@ -40,8 +40,9 @@ python -O -m PyInstaller --onefile --windowed `
 """
 quiz_start_time = time.time()
 
-APP_VERSION = "1.4.1"
+APP_VERSION = "1.4.2"
 APP_VERSION_DATE = "2025-11-02"
+# QuizApp v1.4.2 : 업데이트 확인 테스트
 # QuizApp v1.4.1 : 업데이트 확인 기능 추가
 # QuizApp v1.4.0 : 숨겨진 코드 입력 시 프로그램 종료 기능 추가, 2번 이상 오다답 시 정답 표시
 # QuizApp v1.3.4 : 오답리스트 메일 발송시 수신자 여러명 지원
