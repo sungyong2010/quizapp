@@ -42,8 +42,9 @@ python -O -m PyInstaller --onefile --windowed `
 """
 quiz_start_time = time.time()
 
-APP_VERSION = "1.4.4"
+APP_VERSION = "1.4.5"
 APP_VERSION_DATE = "2025-11-02"
+# QuizApp v1.4.5 : 업데이트 다운로드 및 실행 final test
 # QuizApp v1.4.4 : Fix - 업데이트 다운로드 및 실행
 # QuizApp v1.4.3 : Fix - 업데이트 다운로드 및 실행 중 오류 처리 추가
 # QuizApp v1.4.2 : 업데이트 확인 테스트
