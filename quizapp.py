@@ -19,6 +19,8 @@ import smtplib
 from email.mime.text import MIMEText
 import winsound
 import requests
+import json
+import shutil
 
 """
 Description:
@@ -40,8 +42,10 @@ python -O -m PyInstaller --onefile --windowed `
 """
 quiz_start_time = time.time()
 
-APP_VERSION = "1.4.2"
+APP_VERSION = "1.4.4"
 APP_VERSION_DATE = "2025-11-02"
+# QuizApp v1.4.4 : Fix - 업데이트 다운로드 및 실행
+# QuizApp v1.4.3 : Fix - 업데이트 다운로드 및 실행 중 오류 처리 추가
 # QuizApp v1.4.2 : 업데이트 확인 테스트
 # QuizApp v1.4.1 : 업데이트 확인 기능 추가
 # QuizApp v1.4.0 : 숨겨진 코드 입력 시 프로그램 종료 기능 추가, 2번 이상 오다답 시 정답 표시
@@ -572,9 +576,37 @@ else:
     root.protocol("WM_DELETE_WINDOW", on_closing)
 
 def check_for_update(current_version=APP_VERSION):
+    # try:
+    #     api_url = "https://api.github.com/repos/sungyong2010/quizapp/contents/version.json"
+    #     headers = {
+    #         "Accept": "application/vnd.github.v3.raw",
+    #         "Authorization": "token YOUR_GITHUB_TOKEN"
+    #     }
+    #     response = requests.get(api_url, headers=headers)
+    #     response.raise_for_status()
+    #     import base64
+    #     import json
+    #     data = response.json()
+    #     # 만약 "content" 키가 있으면 base64 디코딩
+    #     if isinstance(data, dict) and "content" in data:
+    #         decoded = base64.b64decode(data["content"]).decode("utf-8")
+    #         data = json.loads(decoded)
+    #     elif isinstance(data, str):
+    #         data = json.loads(data)
+    #     latest_version = data["latest_version"]
+    #     download_url = data["download_url"]
+
+    #     if latest_version != current_version:
+    #         return download_url
+    # except Exception as e:
+    #     logging.warning(f"업데이트 체크 실패: {e}")
+    # return None
     try:
-        response = requests.get("https://github.com/sungyong2010/anything-to-share/blob/main/Quizapp/version.json")
-        data = response.json()
+    # 공개 서버의 version.json RAW URL 사용
+        api_url = "https://raw.githubusercontent.com/sungyong2010/anything-to-share/main/Quizapp/version.json"
+        response = requests.get(api_url)
+        response.raise_for_status()
+        data = response.json() if response.headers.get("content-type", "").startswith("application/json") else json.loads(response.text)
         latest_version = data["latest_version"]
         download_url = data["download_url"]
 
@@ -596,10 +628,33 @@ def download_and_replace_exe(download_url):
     except Exception as e:
         logging.error(f"업데이트 다운로드 실패: {e}")
 
+def overwrite_old_exe():
+    old_exe = "QuizApp.exe"
+    new_exe = sys.argv[0]
+    # 기존 exe가 실행 중이면 잠시 대기
+    for _ in range(10):
+        try:
+            os.remove(old_exe)
+            break
+        except PermissionError:
+            time.sleep(0.5)
+    shutil.move(new_exe, old_exe)
+    os.startfile(old_exe)
+    sys.exit()        
+
 if __name__ == "__main__":
+    if os.path.basename(sys.argv[0]).lower() == "quizapp_new.exe":
+        overwrite_old_exe()
+
     update_url = check_for_update()
     if update_url:
+        logging.info(f"업데이트 URL: {update_url}")  # 디버깅용 로그 추가
         messagebox.showinfo("업데이트", "새 버전이 있습니다. 자동으로 업데이트합니다.")
-        download_and_replace_exe(update_url)
+        try:
+            download_and_replace_exe(update_url)
+        except Exception as e:
+            logging.error(f"업데이트 다운로드 및 실행 중 오류: {e}")
+            messagebox.showerror("업데이트 오류", f"업데이트 중 오류 발생: {e}")
+
     update_question()
     root.mainloop()
