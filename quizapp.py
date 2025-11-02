@@ -620,18 +620,18 @@ def download_and_replace_exe(download_url):
     try:
         messagebox.showinfo("업데이트", "새 버전 다운로드 중입니다. 잠시만 기다려 주세요...")
         response = requests.get(download_url)
-        with open("QuizApp_new.exe", "wb") as f:
+        with open("quizapp_new.exe", "wb") as f:
             f.write(response.content)
 
         # 기존 exe 종료 후 새 exe 실행
-        subprocess.Popen(["QuizApp_new.exe"])
+        subprocess.Popen(["quizapp_new.exe"])
         sys.exit()
     except Exception as e:
         logging.error(f"업데이트 다운로드 실패: {e}")
         messagebox.showerror("업데이트 오류", f"다운로드 중 오류 발생: {e}")
 
 def overwrite_old_exe():
-    old_exe = "QuizApp.exe"
+    old_exe = "quizapp.exe"
     new_exe = sys.argv[0]
     # 기존 exe가 실행 중이면 잠시 대기
     for _ in range(10):
