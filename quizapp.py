@@ -81,7 +81,8 @@ def on_closing():
 
 # F1 키로 버전 정보 보기
 def show_version():
-    show_custom_message("버전 정보", "QuizApp v1.4.1\n2025-11-04")
+    show_custom_message("버전 정보", "QuizApp v1.4.2\n2025-11-04")
+    # QuizApp v1.4.2 : 복사/붙여넣기 방지
     # QuizApp v1.4.1 : Code formatting 수정, Message box 개선
     # QuizApp v1.4.0 : 숨겨진 코드 입력 시 프로그램 종료 기능 추가, 2번 이상 오다답 시 정답 표시
     # QuizApp v1.3.4 : 오답리스트 메일 발송시 수신자 여러명 지원
@@ -625,10 +626,20 @@ if DEBUG_MODE:
 label = tk.Label(root, text="", font=("Arial", 28), fg="white", bg="black")
 label.pack(pady=80)
 
+# 복사/붙여넣기 방지 함수
+def disable_copy_paste(event):
+    return "break"
+
 # 엔터키로도 정답 제출 할 수 있도록...
 entry = tk.Entry(root, font=("Arial", 24))
 entry.pack()
 entry.bind("<Return>", lambda event: check_answer())
+
+# 복사/붙여넣기 관련 단축키 차단
+entry.bind('<Control-c>', disable_copy_paste)  # 복사 차단
+entry.bind('<Control-v>', disable_copy_paste)  # 붙여넣기 차단
+entry.bind('<Control-x>', disable_copy_paste)  # 잘라내기 차단
+entry.bind('<Control-a>', disable_copy_paste)  # 전체 선택 차단
 
 # 버튼을 클릭해서 정답 제출 할 수 있도록...
 button = tk.Button(root, text="정답 제출", font=("Arial", 20), command=check_answer)
