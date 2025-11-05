@@ -49,6 +49,29 @@ def is_admin() -> bool:
         return False
 
 
+def show_popup(message: str, title: str = "QuizApp Updater", timeout_ms: int = 2500, flags: int = 0x00000040):
+    """Show a transient informational popup.
+
+    Attempts to use MessageBoxTimeoutW (undocumented but widely available) so it auto-closes.
+    Falls back to MessageBoxW if timeout variant unavailable (user must dismiss then).
+
+    flags default adds MB_ICONINFORMATION (0x40). Caller can pass other MB_* flags OR them in.
+    """
+    try:
+        user32 = ctypes.windll.user32
+        # Try timeout version: int MessageBoxTimeoutW(HWND, LPCWSTR, LPCWSTR, UINT, WORD, DWORD)
+        try:
+            MessageBoxTimeoutW = user32.MessageBoxTimeoutW
+            MessageBoxTimeoutW(None, message, title, flags, 0, timeout_ms)
+            return
+        except AttributeError:
+            pass
+        # Fallback standard message box (modal)
+        user32.MessageBoxW(None, message, title, flags)
+    except Exception as e:
+        logging.warning(f"Popup failed: {e} | message={message}")
+
+
 def read_local_version() -> str:
     if not os.path.exists(LOCAL_VERSION_JSON):
         return "0.0.0"
@@ -202,29 +225,38 @@ def launch_app():
 
 def main():
     logging.info("Updater started")
+    show_popup("업데이트 확인 중...", timeout_ms=1800)
     if not is_admin():
         logging.error("Updater not running with admin rights. Exiting.")
+        show_popup("관리자 권한 아님 - 종료", timeout_ms=2500, flags=0x00000010)  # icon hand
         return
     local_v = read_local_version()
     remote_v, download_url = fetch_remote_version()
     if not remote_v:
         logging.info("Remote version unavailable. Launching existing app.")
+        show_popup("원격 버전 정보 없음. 앱 실행", timeout_ms=2500, flags=0x00000030)  # warning icon
         launch_app()
         return
     if needs_update(local_v, remote_v):
         logging.info(f"Update needed. Local={local_v} Remote={remote_v}")
+        show_popup(f"새 버전 {remote_v} 업데이트 진행", timeout_ms=2200)
         if not terminate_running_exe(TARGET_EXE_PATH):
             logging.error("Cannot terminate running instance. Abort update.")
+            show_popup("실행 중 프로세스 종료 실패 - 기존 앱 실행", timeout_ms=3000, flags=0x00000030)
             launch_app()
             return
         backup_existing(TARGET_EXE_PATH)
+        show_popup("다운로드 중...", timeout_ms=2000)
         new_path = download_new_exe(download_url)
         if replace_exe(new_path, TARGET_EXE_PATH):
             write_local_version(remote_v)
+            show_popup("업데이트 완료! 앱 실행", timeout_ms=2500)
         else:
             logging.error("Update failed during replace phase")
+            show_popup("업데이트 실패 - 기존 앱 실행", timeout_ms=3000, flags=0x00000030)
     else:
         logging.info(f"No update needed. Local={local_v} Remote={remote_v}")
+        show_popup("최신 버전입니다. 앱 실행", timeout_ms=2000)
     launch_app()
 
 
