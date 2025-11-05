@@ -36,6 +36,14 @@ BACKUP_DIR = r"c:\Apps\quizapp\backup"
 LOG_PATH = r"c:\temp\quizappupdater.log"
 SCHEDULED_TASK_NAME = r"\QuizApp 자동 실행"
 
+# 기존 로그 파일이 있으면 삭제
+if os.path.exists(LOG_PATH):
+    try:
+        os.remove(LOG_PATH)
+    except Exception as e:
+        print(f"Failed to remove old log file: {e}")
+
+# 로그 디렉토리 생성 및 로깅 설정
 os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
 logging.basicConfig(
     filename=LOG_PATH,
