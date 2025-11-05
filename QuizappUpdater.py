@@ -24,8 +24,12 @@ try:
     import psutil
     import win32security
     import ntsecuritycon
+    import win32ts
+    import win32con
+    import win32api
+    import win32process
 except ImportError:
-    print("Required modules missing. Please install requests and psutil.")
+    print("Required modules missing. Please install requests, psutil, and pywin32.")
     sys.exit(1)
 
 REMOTE_VERSION_URL = "https://raw.githubusercontent.com/sungyong2010/anything-to-share/main/Quizapp/version.json"
@@ -59,27 +63,163 @@ def is_admin() -> bool:
         return False
 
 
+def create_interactive_task(task_name: str, command: str) -> bool:
+    """Create a temporary task that runs with interactive privileges"""
+    try:
+        cmd = [
+            "schtasks", "/create", "/tn", task_name,
+            "/tr", command,
+            "/sc", "once",
+            "/st", datetime.now().strftime("%H:%M"),
+            "/ru", "SYSTEM",  # Run as SYSTEM
+            "/rl", "HIGHEST", # Highest privileges
+            "/f",            # Force creation
+            "/it"            # Allow interaction with desktop
+        ]
+        subprocess.run(cmd, check=True)
+        return True
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Failed to create task: {e}")
+        return False
+
+def run_interactive_command(command: str) -> bool:
+    """Run a command with interactive privileges using a temporary scheduled task"""
+    task_name = f"QuizAppTemp_{int(time.time())}"
+    try:
+        if create_interactive_task(task_name, command):
+            # Run the task
+            subprocess.run(["schtasks", "/run", "/tn", task_name], check=True)
+            time.sleep(1)  # Wait for execution
+            return True
+    except Exception as e:
+        logging.error(f"Failed to run interactive command: {e}")
+    finally:
+        # Clean up the temporary task
+        try:
+            subprocess.run(["schtasks", "/delete", "/tn", task_name, "/f"], check=True)
+        except:
+            pass
+    return False
+
 def show_popup(message: str, title: str = "QuizApp Updater", timeout_ms: int = 2500, flags: int = 0x00000040):
-    """Show a transient informational popup.
+    """Try multiple methods to surface a UI message to the logged-in user and log diagnostics.
 
-    Attempts to use MessageBoxTimeoutW (undocumented but widely available) so it auto-closes.
-    Falls back to MessageBoxW if timeout variant unavailable (user must dismiss then).
-
-    flags default adds MB_ICONINFORMATION (0x40). Caller can pass other MB_* flags OR them in.
+    This function will:
+    - log process/user/session info
+    - run diagnostic commands (whoami, query user, qwinsta)
+    - attempt msg to console users
+    - attempt WTSSendMessage (if available)
+    - fallback to a local MessageBox (useful when running in interactive session)
+    All outputs/errors are written to the updater log for analysis.
     """
     try:
-        user32 = ctypes.windll.user32
-        # Try timeout version: int MessageBoxTimeoutW(HWND, LPCWSTR, LPCWSTR, UINT, WORD, DWORD)
+        logging.info("show_popup called")
+        # Basic runtime info
         try:
-            MessageBoxTimeoutW = user32.MessageBoxTimeoutW
-            MessageBoxTimeoutW(None, message, title, flags, 0, timeout_ms)
-            return
-        except AttributeError:
-            pass
-        # Fallback standard message box (modal)
-        user32.MessageBoxW(None, message, title, flags)
+            current_user = os.getlogin()
+        except Exception:
+            import getpass
+            current_user = getpass.getuser()
+        logging.debug(f"pid={os.getpid()} user={current_user} is_admin={is_admin()}")
+
+        # Run diagnostics: whoami, query user, qwinsta
+        for cmd in (["whoami"], ["query", "user"], ["qwinsta"]):
+            try:
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+                logging.debug(f"cmd={' '.join(cmd)} rc={r.returncode} out={r.stdout.strip()} err={r.stderr.strip()}")
+            except Exception as e:
+                logging.warning(f"diag cmd failed: {' '.join(cmd)} -> {e}")
+
+        # Try sending msg to console users. Build user set from both `query user` and `qwinsta` outputs
+        try:
+            users_set = set()
+            r = subprocess.run(["query", "user"], capture_output=True, text=True, timeout=5)
+            for line in r.stdout.splitlines()[1:]:
+                line = line.strip()
+                if not line:
+                    continue
+                parts = line.split()
+                if not parts:
+                    continue
+                # first column may start with '>' marking current session; strip it
+                uname = parts[0].lstrip('>').strip()
+                if uname and uname.lower() not in ("services", "console"):
+                    users_set.add(uname)
+
+            # Also parse qwinsta to catch usernames in second column
+            try:
+                r2 = subprocess.run(["qwinsta"], capture_output=True, text=True, timeout=5)
+                for line in r2.stdout.splitlines()[1:]:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    parts = line.split()
+                    # qwinsta format: SESSIONNAME USERNAME ID STATE ... -> username is often second column
+                    if len(parts) >= 2:
+                        uname = parts[1].lstrip('>').strip()
+                        if uname and uname.lower() not in ("services", "console"):
+                            users_set.add(uname)
+            except Exception:
+                pass
+
+            users = list(users_set)
+            logging.debug(f"console users detected: {users}")
+        except Exception as e:
+            logging.warning(f"Failed to enumerate users via 'query user'/'qwinsta': {e}")
+            users = []
+
+        display_msg = f"{title}\n\n{message}"
+        for user in users:
+            try:
+                r = subprocess.run(["msg", user, "/time:10", display_msg], capture_output=True, text=True, timeout=5)
+                logging.debug(f"msg -> user={user} rc={r.returncode} out={r.stdout.strip()} err={r.stderr.strip()}")
+            except Exception as e:
+                logging.warning(f"msg failed for {user}: {e}")
+
+        # Try WTSSendMessage if pywin32 available
+        try:
+            if hasattr(win32ts, 'WTSSendMessage'):
+                sessions = win32ts.WTSEnumerateSessions(win32ts.WTS_CURRENT_SERVER_HANDLE)
+                for s in sessions:
+                    sid = s.get('SessionId') if isinstance(s, dict) else s[0]
+                    state = s.get('State') if isinstance(s, dict) else s[2]
+                    state_str = str(state).lower()
+                    # match either English or Korean localized active state
+                    if 'active' in state_str or '활성' in state_str:
+                        logging.info(f"WTSSendMessage -> session={sid}")
+                        try:
+                            # WTSSendMessage signature may vary; wrap in try/except
+                            res = win32ts.WTSSendMessage(win32ts.WTS_CURRENT_SERVER_HANDLE, sid, title, message, flags, 0, timeout_ms//1000)
+                            logging.debug(f"WTSSendMessage result: {res}")
+                        except Exception as e:
+                            logging.warning(f"WTSSendMessage call failed for session {sid}: {e}")
+        except Exception as e:
+            logging.warning(f"WTSSendMessage path failed: {e}")
+
+        # Final fallback: if running interactively, try MessageBoxTimeoutW
+        try:
+            user32 = ctypes.windll.user32
+            try:
+                MessageBoxTimeoutW = user32.MessageBoxTimeoutW
+                MessageBoxTimeoutW.argtypes = [
+                    ctypes.c_void_p,
+                    ctypes.c_wchar_p,
+                    ctypes.c_wchar_p,
+                    ctypes.c_uint,
+                    ctypes.c_ushort,
+                    ctypes.c_uint,
+                ]
+                MessageBoxTimeoutW.restype = ctypes.c_int
+                MessageBoxTimeoutW(None, message, title, flags, 0, timeout_ms)
+                logging.info("MessageBoxTimeoutW invoked")
+            except Exception:
+                user32.MessageBoxW(None, message, title, flags)
+                logging.info("MessageBoxW invoked")
+        except Exception as e:
+            logging.warning(f"Final MessageBox fallback failed: {e}")
+
     except Exception as e:
-        logging.warning(f"Popup failed: {e} | message={message}")
+        logging.exception(f"show_popup unexpected error: {e}")
 
 
 def read_local_version() -> str:
