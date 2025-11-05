@@ -27,8 +27,8 @@ except ImportError:
     sys.exit(1)
 
 REMOTE_VERSION_URL = "https://raw.githubusercontent.com/sungyong2010/anything-to-share/main/Quizapp/version.json"
-REMOTE_EXE_URL = "https://raw.githubusercontent.com/sungyong2010/anything-to-share/main/Quizapp/quizapp.exe"
-TARGET_EXE_PATH = r"c:\Apps\quizapp\quizapp.exe"
+REMOTE_EXE_URL = "https://raw.githubusercontent.com/sungyong2010/anything-to-share/main/Quizapp/Quizapp.exe"
+TARGET_EXE_PATH = r"c:\Apps\quizapp\Quizapp.exe"
 LOCAL_VERSION_JSON = r"c:\Apps\quizapp\version.json"  # Store local version for comparison
 BACKUP_DIR = r"c:\Apps\quizapp\backup"
 LOG_PATH = r"c:\temp\quizappupdater.log"
