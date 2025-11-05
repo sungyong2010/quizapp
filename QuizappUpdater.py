@@ -225,7 +225,7 @@ def launch_app():
 
 def main():
     logging.info("Updater started")
-    show_popup("업데이트 확인 중...", timeout_ms=1800)
+    # show_popup("업데이트 확인 중...", timeout_ms=1800)
     if not is_admin():
         logging.error("Updater not running with admin rights. Exiting.")
         show_popup("관리자 권한 아님 - 종료", timeout_ms=2500, flags=0x00000010)  # icon hand
@@ -256,7 +256,7 @@ def main():
             show_popup("업데이트 실패 - 기존 앱 실행", timeout_ms=3000, flags=0x00000030)
     else:
         logging.info(f"No update needed. Local={local_v} Remote={remote_v}")
-        show_popup("최신 버전입니다. 앱 실행", timeout_ms=2000)
+        # show_popup("최신 버전입니다. 앱 실행", timeout_ms=2000)
     launch_app()
 
 
