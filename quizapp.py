@@ -40,7 +40,7 @@ python -O -m PyInstaller --onefile --windowed `
     --add-data "quizapp-credentials.json;." `
     --add-data "correct.wav;." `
     --add-data "wrong.wav;." `
-    quizapp.py
+    Quizapp.py
 """
 quiz_start_time = time.time()
 
