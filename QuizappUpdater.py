@@ -22,6 +22,8 @@ from datetime import datetime
 try:
     import requests
     import psutil
+    import win32security
+    import ntsecuritycon
 except ImportError:
     print("Required modules missing. Please install requests and psutil.")
     sys.exit(1)
@@ -171,7 +173,7 @@ def replace_exe(new_path: str, target_path: str) -> bool:
     if not new_path or not os.path.exists(new_path):
         logging.error("New exe path invalid")
         return False
-    # Ensure target directory permissions allow replacement (assumes updater runs elevated)
+    
     try:
         # Remove target if exists with retry
         for _ in range(10):
@@ -183,13 +185,69 @@ def replace_exe(new_path: str, target_path: str) -> bool:
                     time.sleep(0.5)
             else:
                 break
+        
+        # 파일 복사
         shutil.move(new_path, target_path)
-        logging.info(f"Replaced {target_path}")
-        return True
+        
+        # 새로운 exe 파일에 권한 설정
+        if set_permissions(target_path):
+            logging.info(f"Replaced {target_path} and set permissions successfully")
+            return True
+        else:
+            logging.error(f"Failed to set permissions on {target_path}")
+            return False
     except Exception as e:
         logging.error(f"Replace failed: {e}")
         return False
 
+
+def set_permissions(path):
+    """Sets appropriate permissions on the specified file or directory:
+    - SYSTEM and Administrators get full control
+    - Everyone gets only read and execute permissions
+    """
+    try:
+        import win32security
+        import ntsecuritycon as con
+        
+        # Get SIDs for different security principals
+        everyone = win32security.ConvertStringSidToSid("S-1-1-0")  # Everyone
+        system = win32security.ConvertStringSidToSid("S-1-5-18")   # SYSTEM
+        admins = win32security.ConvertStringSidToSid("S-1-5-32-544")  # Administrators
+        
+        # Get current security descriptor
+        sd = win32security.GetFileSecurity(path, win32security.DACL_SECURITY_INFORMATION)
+        dacl = win32security.ACL()
+        
+        # Add full control for SYSTEM and Administrators
+        dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, system)
+        dacl.AddAccessAllowedAce(win32security.ACL_REVISION, con.FILE_ALL_ACCESS, admins)
+        
+        # Add only read and execute permissions for Everyone
+        everyone_permissions = (
+            # Basic read permissions
+            con.GENERIC_READ |
+            # Execute permissions
+            con.GENERIC_EXECUTE |
+            # Additional permissions
+            con.SYNCHRONIZE |
+            # Specific file permissions
+            con.FILE_READ_DATA |
+            con.FILE_READ_ATTRIBUTES |
+            con.FILE_READ_EA |
+            con.FILE_EXECUTE
+        )
+        dacl.AddAccessAllowedAce(win32security.ACL_REVISION, everyone_permissions, everyone)
+        
+        # Set the new DACL
+        sd.SetSecurityDescriptorDacl(1, dacl, 0)
+        win32security.SetFileSecurity(path, win32security.DACL_SECURITY_INFORMATION, sd)
+        
+        logging.info(f"Successfully set permissions for {path}")
+        return True
+    except Exception as e:
+        logging.error(f"Failed to set permissions for {path}: {e}")
+        return False
 
 def write_local_version(version: str):
     try:
