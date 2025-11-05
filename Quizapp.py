@@ -81,7 +81,8 @@ def on_closing():
 
 # F1 키로 버전 정보 보기
 def show_version():
-    show_custom_message("버전 정보", "QuizApp v1.4.2\n2025-11-04")
+    show_custom_message("버전 정보", "QuizApp v1.4.3\n2025-11-05")
+    # QuizApp v1.4.3 : 정답 비교시 앞뒤 공백 제거
     # QuizApp v1.4.2 : 복사/붙여넣기 방지
     # QuizApp v1.4.1 : Code formatting 수정, Message box 개선
     # QuizApp v1.4.0 : 숨겨진 코드 입력 시 프로그램 종료 기능 추가, 2번 이상 오다답 시 정답 표시
@@ -287,9 +288,9 @@ def check_answer(event=None):
         return os.path.join(os.path.abspath("."), relative_path)
 
     global current_index, correct_count, total_attempts, wrong_list, round_attempts, round_correct
+    # 입력값의 앞뒤 공백만 제거 (대소문자 구분)
     user_input = entry.get().strip()
-    user_input_lower = user_input.lower()
-    correct_answer = quiz_data[current_index][1].lower()
+    correct_answer = quiz_data[current_index][1].strip()
     # hidden code(=exit_code) 입력 시 즉시 종료
     if exit_code and user_input == exit_code:
         show_custom_message("종료", "숨겨진 코드가 입력되어 프로그램을 종료합니다.")
@@ -301,7 +302,7 @@ def check_answer(event=None):
     round_attempts += 1
     total_attempts += 1
 
-    if user_input_lower == correct_answer:
+    if user_input == correct_answer:
         round_correct += 1
         correct_count += 1
         # winsound.MessageBeep(winsound.MB_OK)
