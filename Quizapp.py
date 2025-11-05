@@ -81,7 +81,8 @@ def on_closing():
 
 # F1 키로 버전 정보 보기
 def show_version():
-    show_custom_message("버전 정보", "QuizApp v1.4.3\n2025-11-05")
+    show_custom_message("버전 정보", "QuizApp v1.4.4\n2025-11-06")
+    # QuizApp v1.4.4 : 오답 리스트 포맷 변경
     # QuizApp v1.4.3 : 정답 비교시 앞뒤 공백 제거
     # QuizApp v1.4.2 : 복사/붙여넣기 방지
     # QuizApp v1.4.1 : Code formatting 수정, Message box 개선
@@ -199,7 +200,7 @@ def send_wrong_list_email(wrong_list, elapsed_time=None):
     # 각 항목을 탭으로 구분하여 한 줄씩 나열=>엑셀에 붙여 넣기 좋게 발송
     # body = "\n".join([f"{item[0]}\t{item[1]}\t{item[2]}" for item in unique_wrong_list])
     body = "\n".join(
-        [f"{item[0]} → {item[1]} (힌트: {item[2]})" for item in unique_wrong_list]
+        [f"{item[0]} / {item[1]} / {item[2]}" for item in unique_wrong_list]
     )
     if elapsed_time is not None:
         h = int(elapsed_time // 3600)
