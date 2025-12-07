@@ -81,7 +81,8 @@ def on_closing():
 
 # F1 키로 버전 정보 보기
 def show_version():
-    show_custom_message("버전 정보", "QuizApp v1.4.4\n2025-11-06")
+    show_custom_message("버전 정보", "QuizApp v1.4.5\n2025-12-07")
+    # QuizApp v1.4.5 : 새벽 12시~8시 실행 불가 기능 추가(Early Bird Bonus)
     # QuizApp v1.4.4 : 오답 리스트 포맷 변경
     # QuizApp v1.4.3 : 정답 비교시 앞뒤 공백 제거
     # QuizApp v1.4.2 : 복사/붙여넣기 방지
@@ -664,6 +665,25 @@ else:
     # DEBUG 모드에서는 정상적으로 창 닫기 허용
     root.protocol("WM_DELETE_WINDOW", on_closing)
 
+# ✅ 시간 체크 함수 추가
+def check_time_restriction():
+    """새벽 12시부터 오전 8시 사이인지 체크"""
+    current_time = datetime.now()
+    current_hour = current_time.hour
+    
+    # 0시(자정)부터 9시 전까지는 실행 불가
+    if 0 <= current_hour < 8:
+        return False
+    return True
+
 if __name__ == "__main__":
+    if not check_time_restriction():
+        show_custom_message(
+            "Early Bird Bonus", 
+            "일찍 일어나는 새는 벌레를 잡는다!\n\n"
+        )
+        unblock_windows_key()
+        root.destroy()
+        sys.exit()
     update_question()
     root.mainloop()
