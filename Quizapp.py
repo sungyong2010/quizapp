@@ -81,7 +81,8 @@ def on_closing():
 
 # F1 키로 버전 정보 보기
 def show_version():
-    show_custom_message("버전 정보", "QuizApp v1.4.5\n2025-12-07")
+    show_custom_message("버전 정보", "QuizApp v1.4.6\n2025-12-11")
+    # QuizApp v1.4.6 : 포커스 문제 개선 및 안정성 향상
     # QuizApp v1.4.5 : 새벽 12시~8시 실행 불가 기능 추가(Early Bird Bonus)
     # QuizApp v1.4.4 : 오답 리스트 포맷 변경
     # QuizApp v1.4.3 : 정답 비교시 앞뒤 공백 제거
@@ -268,6 +269,7 @@ def show_custom_message(title, message):
         popup.grab_release()
         popup.destroy()
         entry.focus_set()  # 메인 창의 entry에 포커스 돌려주기
+        root.after(100, lambda: entry.focus_set())  # 추가 지연 포커스로 확실하게
 
     ok_button = tk.Button(popup, text="확인", font=("Arial", 20), command=close_popup)
     ok_button.pack(pady=20)
@@ -281,6 +283,11 @@ def show_custom_message(title, message):
 
     # 창이 닫힐 때까지 대기
     popup.wait_window()
+
+    # 팝업 종료 후 entry에 포커스 확실히 복원
+    root.focus_force()
+    entry.focus_set()
+    root.after(100, lambda: entry.focus_set())
 
 
 def check_answer(event=None):
